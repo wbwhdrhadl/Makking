@@ -5,45 +5,38 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color.fromARGB(255, 254, 255, 209),
+      backgroundColor: Colors.white, // 배경색을 하얀색으로 설정
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              '../assets/logo.png', // 새로운 아이콘 경로
-              width: 200, // 아이콘 너비
-              height: 200, // 아이콘 높이
-            ),
-            SizedBox(height: 20),
-            TextButton(
-              onPressed: () {
-                // 카카오 로그인 로직 추가 (나중에 구현)
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero, // 패딩 제거
-                minimumSize: Size(150, 50), // 최소 사이즈 설정
-              ),
+            SizedBox(
+              width: 500, // 로고의 너비
+              height: 500, // 로고의 높이
               child: Image.asset(
-                'assets/kakao_login_button.png', // 이미지 파일 경로
-                fit: BoxFit.cover, // 이미지를 버튼 크기에 맞게 조정
+                '../assets/logo.png',
+                fit: BoxFit.contain,
               ),
             ),
-            SizedBox(height: 10),
-            TextButton(
-              onPressed: () {
-                // 네이버 로그인 로직 추가 (나중에 구현)
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero, // 패딩 제거
-                minimumSize: Size(150, 50), // 최소 사이즈 설정
-              ),
+            SizedBox(height: 10), // 로고와 버튼 사이 간격
+            SizedBox(
+              width: 300, // 버튼의 너비
+              height: 60, // 버튼의 높이
               child: Image.asset(
-                'assets/naver_login.png', // 이미지 파일 경로
-                fit: BoxFit.cover, // 이미지를 버튼 크기에 맞게 조정
+                '../assets/kakao_login.png',
+                fit: BoxFit.scaleDown, // 이미지를 균일한 크기로 조정
               ),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 10), // 버튼 간 간격
+            SizedBox(
+              width: 300, // 버튼의 너비
+              height: 60, // 버튼의 높이
+              child: Image.asset(
+                '../assets/naver_login.png',
+                fit: BoxFit.scaleDown, // 이미지를 균일한 크기로 조정
+              ),
+            ),
+            SizedBox(height: 10), // 버튼 간 간격
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -54,15 +47,16 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black, // 버튼 색상
-                foregroundColor: Colors.white, // 글자색 설정
-                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 textStyle: TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
+                fixedSize: Size(300, 60), // 버튼의 크기
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero, // 네모난 모양
+                  borderRadius: BorderRadius.circular(0),
                 ),
               ),
               child: Text('비회원으로 계속하기'),

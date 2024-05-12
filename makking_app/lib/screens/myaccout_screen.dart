@@ -60,8 +60,7 @@ class AccountSettingsScreen extends StatelessWidget {
           ListTile(
             leading: CircleAvatar(
               radius: 25,
-              backgroundImage: AssetImage(
-                  '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img4.jpeg'), // 프로필 이미지 경로
+              backgroundImage: AssetImage('../assets/img4.jpeg'), // 프로필 이미지 경로
             ),
             title: Text('프로필'),
             subtitle: Text('이다군이다은'),
