@@ -35,7 +35,8 @@ class BroadcastListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BroadcastScreen(),
+                  builder: (context) =>
+                      FaceRecognitionScreen(title: '얼굴 인식 화면'),
                 ), // 동영상 화면으로 이동
               );
             },
@@ -47,9 +48,8 @@ class BroadcastListScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => FaceRecognitionScreen(
-                    title: '얼굴 인식 화면',
-                  ),
-                ), // 얼굴 인식 화면으로 이동
+                      title: '얼굴 인식 화면'), //이 부분 수정해야함. 얼굴인식화면으로 넘어가면 X
+                ),
               );
             },
           ),
