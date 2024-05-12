@@ -12,12 +12,14 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: BroadcastScreen(),
+      home: Broadcast1(),
     );
   }
 }
 
-class BroadcastScreen extends StatelessWidget {
+class Broadcast1 extends StatelessWidget {
+  final TextEditingController _controller = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,41 +74,48 @@ class BroadcastScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                decoration: InputDecoration(
+                                  hintText: '채팅 입력...',
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            IconButton(
+                              icon: Icon(Icons.send, color: Colors.blue),
+                              onPressed: () {
+                                // Add functionality to send the message
+                                String message = _controller.text;
+                                // Clear the input field
+                                _controller.clear();
+                                // Handle the message sending logic
+                                print('Message sent: $message');
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ],
-          ),
-          // Filter Buttons
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SafeArea(
-              child: Container(
-                color: Colors.black54,
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    FilterButton(
-                      label: '필터적용',
-                      imagePath:
-                          '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img3.jpeg',
-                    ),
-                    FilterButton(
-                      label: '필터적용',
-                      imagePath:
-                          '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img4.jpeg',
-                    ),
-                    FilterButton(
-                      label: '필터적용',
-                      imagePath:
-                          '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img3.jpeg',
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -127,34 +136,6 @@ class ChatMessage extends StatelessWidget {
         message,
         style: TextStyle(color: Colors.white),
       ),
-    );
-  }
-}
-
-class FilterButton extends StatelessWidget {
-  final String label;
-  final String imagePath;
-
-  FilterButton({required this.label, required this.imagePath});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(
-          backgroundImage: AssetImage(imagePath),
-          radius: 20, // Adjust the radius as needed
-        ),
-        SizedBox(
-            height: 5), // Add some spacing between the image and the button
-        ElevatedButton(
-          onPressed: () {
-            // Add filter functionality here
-          },
-          child: Text(label),
-        ),
-      ],
     );
   }
 }

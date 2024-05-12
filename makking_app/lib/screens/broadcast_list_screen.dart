@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'face_recognition_screen.dart';
 import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
+import 'broad1.dart';
+import 'broad2.dart';
 
 void main() {
   runApp(MyApp());
@@ -33,17 +35,30 @@ class BroadcastListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => BroadcastScreen()), // 동영상 화면으로 이동
+                  builder: (context) => BroadcastScreen(),
+                ), // 동영상 화면으로 이동
               );
             },
           ),
           IconButton(
-            icon: Icon(Icons.notifications), // 알람 아이콘 추가
+            icon: Icon(Icons.face_2), // 얼굴 인식 아이콘
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => BroadcastScreen()), // 알람 화면으로 이동
+                  builder: (context) => FaceRecognitionScreen(
+                    title: '얼굴 인식 화면',
+                  ),
+                ), // 얼굴 인식 화면으로 이동
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: CustomSearchDelegate(),
               );
             },
           ),
@@ -52,18 +67,38 @@ class BroadcastListScreen extends StatelessWidget {
       body: ListView(
         children: [
           LiveStreamTile(
-            profileImage: '../assets/img1.jpeg',
+            profileImage:
+                '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img3.jpeg',
             streamerName: '와꾸대장봉준',
             description: '봉준 60만개빵 무창클럽 vs 연합팀 [4경기 점니 3 vs 0 햇살] 스타',
             viewers: 56880,
-            thumbnail: '../assets/img2.jpeg',
+            thumbnail:
+                '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img2.jpeg',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Broadcast1(),
+                ), // 방송 화면으로 이동
+              );
+            },
           ),
           LiveStreamTile(
-            profileImage: '../assets/img1.jpeg',
-            streamerName: '나만의 방송',
-            description: '나만의 방송 설명 텍스트',
+            profileImage:
+                '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img4.jpeg',
+            streamerName: '이다군이다은',
+            description: '대학교 등교길 같이 탐험 ㄱㄱ',
             viewers: 233,
-            thumbnail: '../assets/img1.jpeg',
+            thumbnail:
+                '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img1.jpeg',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Broadcast2(),
+                ), // 방송 화면으로 이동
+              );
+            },
           ),
         ],
       ),
@@ -80,7 +115,10 @@ class BroadcastListScreen extends StatelessWidget {
             IconButton(
               icon: Icon(Icons.search),
               onPressed: () {
-                // 검색 버튼 클릭 시 수행할 동작 추가
+                showSearch(
+                  context: context,
+                  delegate: CustomSearchDelegate(),
+                );
               },
             ),
             IconButton(
@@ -89,8 +127,8 @@ class BroadcastListScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          BroadcastScreen()), // 마이 페이지 화면으로 이동
+                    builder: (context) => AccountSettingsScreen(),
+                  ), // 동영상 화면으로 이동
                 );
               },
             ),
@@ -107,6 +145,7 @@ class LiveStreamTile extends StatelessWidget {
   final String description;
   final int viewers;
   final String thumbnail;
+  final VoidCallback onTap; // onTap 콜백 추가
 
   LiveStreamTile({
     required this.profileImage,
@@ -114,25 +153,94 @@ class LiveStreamTile extends StatelessWidget {
     required this.description,
     required this.viewers,
     required this.thumbnail,
+    required this.onTap, // onTap 콜백을 생성자에 추가
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.all(10),
-      child: Column(
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage(profileImage),
+      child: InkWell(
+        onTap: onTap, // InkWell의 onTap에 콜백 연결
+        child: Column(
+          children: [
+            ListTile(
+              leading: CircleAvatar(
+                backgroundImage: AssetImage(profileImage),
+              ),
+              title: Text(streamerName),
+              subtitle: Text(description),
+              trailing: Text('🔴 $viewers'),
             ),
-            title: Text(streamerName),
-            subtitle: Text(description),
-            trailing: Text('🔴 $viewers'),
-          ),
-          Image.asset(thumbnail),
-        ],
+            Container(
+              height: 150, // Fixed height for the thumbnail
+              child: Image.asset(
+                thumbnail,
+                fit: BoxFit.cover, // Adjust the image to cover the container
+                width: double.infinity,
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class CustomSearchDelegate extends SearchDelegate {
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null);
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    // 검색 결과를 여기에 작성합니다.
+    return Center(
+      child: Text(
+        '검색 결과: $query',
+        style: TextStyle(fontSize: 24),
+      ),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    // 검색 제안을 여기에 작성합니다.
+    List<String> suggestions = [
+      '이다군이다은',
+      '오킹의 걸어서 땅끝까지',
+      '김나영의 논산 논쟁',
+    ].where((suggestion) => suggestion.contains(query)).toList();
+
+    return ListView.builder(
+      itemCount: suggestions.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          title: Text(suggestions[index]),
+          onTap: () {
+            query = suggestions[index];
+            showResults(context);
+          },
+        );
+      },
     );
   }
 }
