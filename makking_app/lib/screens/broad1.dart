@@ -34,7 +34,7 @@ class Broadcast1 extends StatelessWidget {
                 color: Colors.black,
                 child: Center(
                   child: Image.asset(
-                    '/Users/da-eun/Documents/GitHub/Makking/makking_app/assets/img2.jpeg',
+                    'assets/img2.jpeg',
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: 200,
