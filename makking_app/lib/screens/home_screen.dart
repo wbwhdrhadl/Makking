@@ -14,7 +14,7 @@ class HomeScreen extends StatelessWidget {
               width: 500, // 로고의 너비
               height: 500, // 로고의 높이
               child: Image.asset(
-                '../assets/logo.jpeg',
+                'assets/logo.jpeg',
                 fit: BoxFit.contain,
               ),
             ),
@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
               width: 300, // 버튼의 너비
               height: 60, // 버튼의 높이
               child: Image.asset(
-                '../assets/kakao_login.jpeg',
+                'assets/kakao_login.jpeg',
                 fit: BoxFit.scaleDown, // 이미지를 균일한 크기로 조정
               ),
             ),
@@ -32,7 +32,7 @@ class HomeScreen extends StatelessWidget {
               width: 300, // 버튼의 너비
               height: 60, // 버튼의 높이
               child: Image.asset(
-                '../assets/naver_login.jpeg',
+                'assets/naver_login.jpeg',
                 fit: BoxFit.scaleDown, // 이미지를 균일한 크기로 조정
               ),
             ),
