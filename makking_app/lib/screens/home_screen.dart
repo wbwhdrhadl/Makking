@@ -14,7 +14,7 @@ class HomeScreen extends StatelessWidget {
               width: 500, // 로고의 너비
               height: 500, // 로고의 높이
               child: Image.asset(
-                '../assets/logo.jpeg',
+                'makking_app/assets/logo.jpeg',
                 fit: BoxFit.contain,
               ),
             ),
