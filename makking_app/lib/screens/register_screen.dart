@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'login.dart'; // Ensure this import points to your actual login screen file
 
 class RegisterScreen extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -9,7 +10,7 @@ class RegisterScreen extends StatelessWidget {
       TextEditingController();
   final TextEditingController _nameController = TextEditingController();
 
-  Future<void> _register() async {
+  Future<void> _register(BuildContext context) async {
     if (_passwordController.text != _confirmPasswordController.text) {
       print('Passwords do not match');
       return;
@@ -34,6 +35,27 @@ class RegisterScreen extends StatelessWidget {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         print('Registration successful: ${data['msg']}');
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('회원가입 성공'),
+              content: Text('${_usernameController.text}님 회원가입에 성공하였습니다'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: Text('확인'),
+                ),
+              ],
+            );
+          },
+        );
       } else {
         print('Registration failed: ${response.body}');
       }
@@ -101,7 +123,7 @@ class RegisterScreen extends StatelessWidget {
             ),
             SizedBox(height: 32),
             ElevatedButton(
-              onPressed: _register,
+              onPressed: () => _register(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color.fromARGB(255, 129, 139, 195),
                 padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
