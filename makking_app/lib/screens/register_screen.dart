@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RegisterScreen extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -8,7 +10,36 @@ class RegisterScreen extends StatelessWidget {
   final TextEditingController _nameController = TextEditingController();
 
   Future<void> _register() async {
-    // 여기에 회원가입 로직을 추가합니다.
+    if (_passwordController.text != _confirmPasswordController.text) {
+      print('Passwords do not match');
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:5001/register'), // Use localhost for macOS
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'username': _usernameController.text,
+          'password': _passwordController.text,
+          'name': _nameController.text,
+        }),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('Registration successful: ${data['msg']}');
+      } else {
+        print('Registration failed: ${response.body}');
+      }
+    } catch (e) {
+      print('Connection failed: $e');
+    }
   }
 
   @override
