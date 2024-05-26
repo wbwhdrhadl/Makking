@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'broadcast_list_screen.dart';
+import 'login.dart'; // login.dart 파일을 import 합니다.
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -71,7 +72,12 @@ class HomeScreen extends StatelessWidget {
                 SizedBox(height: screenHeight * 0.02), // 버튼 간 간격
                 ElevatedButton(
                   onPressed: () {
-                    // 여기에 회원으로 로그인하기 버튼의 동작을 정의합니다.
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginScreen(), // 로그인 화면으로 이동
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 0, 0, 0),
