@@ -67,11 +67,11 @@ class BroadcastListScreen extends StatelessWidget {
       body: ListView(
         children: [
           LiveStreamTile(
-            profileImage: '../assets/img3.jpeg',
+            profileImage: 'assets/img3.jpeg',
             streamerName: '와꾸대장봉준',
             description: '봉준 60만개빵 무창클럽 vs 연합팀 [4경기 점니 3 vs 0 햇살] 스타',
             viewers: 56880,
-            thumbnail: '../assets/img2.jpeg',
+            thumbnail: 'assets/img2.jpeg',
             onTap: () {
               Navigator.push(
                 context,
@@ -82,11 +82,11 @@ class BroadcastListScreen extends StatelessWidget {
             },
           ),
           LiveStreamTile(
-            profileImage: '../assets/img4.jpeg',
+            profileImage: 'assets/img4.jpeg',
             streamerName: '이다군이다은',
             description: '대학교 등교길 같이 탐험 ㄱㄱ',
             viewers: 233,
-            thumbnail: '../assets/img1.jpeg',
+            thumbnail: 'assets/img1.jpeg',
             onTap: () {
               Navigator.push(
                 context,

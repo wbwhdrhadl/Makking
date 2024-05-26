@@ -34,7 +34,7 @@ class Broadcast2 extends StatelessWidget {
                 color: Colors.black,
                 child: Center(
                   child: Image.asset(
-                    '../assets/img1.jpeg',
+                    'assets/img1.jpeg',
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: 200,

@@ -32,7 +32,7 @@ class BroadcastScreen extends StatelessWidget {
                 color: Colors.black,
                 child: Center(
                   child: Image.asset(
-                    '../assets/img2.jpeg',
+                    'assets/img2.jpeg',
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: 200,
@@ -90,15 +90,15 @@ class BroadcastScreen extends StatelessWidget {
                   children: [
                     FilterButton(
                       label: '필터적용',
-                      imagePath: '../assets/img3.jpeg',
+                      imagePath: 'assets/img3.jpeg',
                     ),
                     FilterButton(
                       label: '필터적용',
-                      imagePath: '../assets/img4.jpeg',
+                      imagePath: 'assets/img4.jpeg',
                     ),
                     FilterButton(
                       label: '필터적용',
-                      imagePath: '../assets/img3.jpeg',
+                      imagePath: 'assets/img3.jpeg',
                     ),
                   ],
                 ),
