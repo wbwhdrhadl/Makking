@@ -1,12 +1,17 @@
 const cors = require('cors');
 const express = require('express');
+const morgan = require('morgan')
+const path = require('path')
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
-const { mongoURI, jwtSecret } = require('./config');
+const fs = require('fs')
+const cookieParser = require('cookie-parser')
+require('dotenv').config();
 
+const mongoURI = process.env.MONGO_URI;
 const app = express();
 
 app.use(cors());  // CORS 설정
@@ -19,6 +24,9 @@ mongoose.connect(mongoURI, {
 })
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.log('MongoDB connection error:', err));
+
+var main = require('./models/s3.js')
+app.use('/', main)
 
 app.post('/register', async (req, res) => {
   const { username, password, name } = req.body;
@@ -58,6 +66,8 @@ app.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server started on port ${PORT}`));
