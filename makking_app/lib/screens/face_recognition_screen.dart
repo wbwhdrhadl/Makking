@@ -86,28 +86,46 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.face, size: 100),
-            SizedBox(height: 20),
-            imageBytes == null
-                ? Text('이미지를 선택해 주세요.')
-                : Image.memory(imageBytes!), // 메모리에서 이미지를 불러와 표시
-            SizedBox(height: 20),
-            Text('방송을 하기 위해서는 얼굴인식이 필요합니다. 정면으로 나온 얼굴 사진 한장을 업로드해주세요.'),
-            ElevatedButton(
-              onPressed: pickImage,
-              child: Text('찾기'),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Center(
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      constraints.maxWidth > 600 ? 600 : constraints.maxWidth,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Icon(Icons.face, size: constraints.maxWidth * 0.3),
+                    SizedBox(height: 20),
+                    imageBytes == null
+                        ? Text('이미지를 선택해 주세요.', textAlign: TextAlign.center)
+                        : Image.memory(imageBytes!),
+                    SizedBox(height: 20),
+                    Text(
+                      '방송을 하기 위해서는 얼굴인식이 필요합니다. 정면으로 나온 얼굴 사진 한장을 업로드해주세요.',
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: pickImage,
+                      child: Text('찾기'),
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: isLoading ? null : uploadImage,
+                      child:
+                          isLoading ? CircularProgressIndicator() : Text('다음'),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isLoading ? null : uploadImage,
-              child: isLoading ? CircularProgressIndicator() : Text('다음'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
