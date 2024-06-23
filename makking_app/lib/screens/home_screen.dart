@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'broadcast_list_screen.dart';
 import 'login.dart'; // login.dart 파일을 import 합니다.
+import 'package:http/http.dart' as http;
+import 'package:jaguar_jwt/jaguar_jwt.dart';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart' as FlutterSecureStorage;
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -28,7 +33,7 @@ class HomeScreen extends StatelessWidget {
                 SizedBox(height: screenHeight * 0.02),
                 ElevatedButton(
                   onPressed: () {
-                    _loginWithKakaoTalk(context);
+                    _loginWithKakao(context);
                   },
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.zero,
@@ -133,44 +138,41 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _loginWithKakaoTalk(BuildContext context) async {
-    try {
-      await UserApi.instance.loginWithKakaoTalk();
-      print('카카오톡으로 로그인 성공');
-      _printUserInfo();
-      Navigator.push(context, MaterialPageRoute(builder: (context) => BroadcastListScreen()));
-    } catch (error) {
-      print('카카오톡으로 로그인 실패: $error');
-      _loginWithKakaoAccount(context);  // Fallback to Kakao account login if KakaoTalk login fails
-    }
-  }
-
-  Future<void> _loginWithKakaoAccount(BuildContext context) async {
-    try {
-      await UserApi.instance.loginWithKakaoAccount();
-      print('카카오 계정으로 로그인 성공');
-      _printUserInfo();
-    } catch (error) {
-      print('카카오 계정으로 로그인 실패: $error');
-    }
-  }
-
-  // This function needs to be defined
-  Future<void> _loginWithNaver(BuildContext context) async {
-    // Implement Naver login logic here
-    print('Implement Naver login logic!');
-  }
-
-  Future<void> _printUserInfo() async {
-    try {
-      User user = await UserApi.instance.me();
-      print("사용자 ID: ${user.id}");
-      print("이메일: ${user.kakaoAccount?.email}");
-      print("이름: ${user.kakaoAccount?.profile?.nickname}");
-      print("성별: ${user.kakaoAccount?.gender}");
-      print("전화번호: ${user.kakaoAccount?.phoneNumber}");
-    } catch (error) {
-      print("사용자 정보 요청 실패: $error");
-    }
+Future<void> _loginWithKakao(BuildContext context) async {
+  // 카카오 로그인 페이지 URL
+  final url = Uri.parse('http://localhost:8080/login/kakao');
+  // 웹뷰나 외부 브라우저를 통해 URL 열기
+  if (await canLaunchUrl(url)) {
+    await launchUrl(url);
+  } else {
+    _showErrorDialog(context, '로그인 페이지를 열 수 없습니다.');
   }
 }
+
+
+    // This function needs to be defined
+      Future<void> _loginWithNaver(BuildContext context) async {
+        // Implement Naver login logic here
+        print('Implement Naver login logic!');
+      }
+
+    void _showErrorDialog(BuildContext context, String message) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Login Error'),
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Close'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
