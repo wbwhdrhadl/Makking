@@ -136,13 +136,12 @@ class HomeScreen extends StatelessWidget {
   Future<void> _loginWithKakaoTalk(BuildContext context) async {
     try {
       await UserApi.instance.loginWithKakaoTalk();
-      Navigator.push(context,
-          MaterialPageRoute(builder: (context) => BroadcastListScreen()));
       print('카카오톡으로 로그인 성공');
+      _printUserInfo();
+      Navigator.push(context, MaterialPageRoute(builder: (context) => BroadcastListScreen()));
     } catch (error) {
       print('카카오톡으로 로그인 실패: $error');
-      _loginWithKakaoAccount(
-          context); // Fallback to Kakao account login if KakaoTalk login fails
+      _loginWithKakaoAccount(context);  // Fallback to Kakao account login if KakaoTalk login fails
     }
   }
 
@@ -150,17 +149,28 @@ class HomeScreen extends StatelessWidget {
     try {
       await UserApi.instance.loginWithKakaoAccount();
       print('카카오 계정으로 로그인 성공');
+      _printUserInfo();
     } catch (error) {
       print('카카오 계정으로 로그인 실패: $error');
     }
   }
 
+  // This function needs to be defined
   Future<void> _loginWithNaver(BuildContext context) async {
+    // Implement Naver login logic here
+    print('Implement Naver login logic!');
+  }
+
+  Future<void> _printUserInfo() async {
     try {
-      await UserApi.instance.loginWithKakaoAccount();
-      print('카카오 계정으로 로그인 성공');
+      User user = await UserApi.instance.me();
+      print("사용자 ID: ${user.id}");
+      print("이메일: ${user.kakaoAccount?.email}");
+      print("이름: ${user.kakaoAccount?.profile?.nickname}");
+      print("성별: ${user.kakaoAccount?.gender}");
+      print("전화번호: ${user.kakaoAccount?.phoneNumber}");
     } catch (error) {
-      print('카카오 계정으로 로그인 실패: $error');
+      print("사용자 정보 요청 실패: $error");
     }
   }
 }
