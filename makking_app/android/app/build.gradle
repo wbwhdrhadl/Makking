@@ -51,11 +51,7 @@ android {
         versionName flutterVersionName
         manifestPlaceholders = [
                 'YOUR_NATIVE_APP_KEY': "06227f68ca3165e60c6c3f8941c6885f",
-<<<<<<< HEAD
                 'applicationName': 'io.flutter.app.FlutterApplication'
-=======
-                'applicationName': 'com.example.makking_app.Makking'
->>>>>>> d156911fdb41fff78413ff0622f81b3d1839dbb0
         ]
 
     }
