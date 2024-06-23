@@ -1,7 +1,7 @@
 // kakaoLogin.js
 const passport = require("passport");
 const KakaoStrategy = require("passport-kakao").Strategy;
-const User = require("./models/User"); // User 모델 가져오기
+const User = require("./User"); // User 모델 가져오기
 
 module.exports = function (passport) {
   passport.use(

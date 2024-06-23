@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'broadcast_list_screen.dart';
 import 'login.dart'; // login.dart 파일을 import 합니다.
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -135,9 +137,9 @@ class HomeScreen extends StatelessWidget {
 
   Future<void> _loginWithKakaoTalk(BuildContext context) async {
     try {
-      await UserApi.instance.loginWithKakaoTalk();
+      OAuthToken token = await UserApi.instance.loginWithKakaoTalk();
       print('카카오톡으로 로그인 성공');
-      _printUserInfo();
+      await _printUserInfo(token);
       Navigator.push(context, MaterialPageRoute(builder: (context) => BroadcastListScreen()));
     } catch (error) {
       print('카카오톡으로 로그인 실패: $error');
@@ -147,9 +149,9 @@ class HomeScreen extends StatelessWidget {
 
   Future<void> _loginWithKakaoAccount(BuildContext context) async {
     try {
-      await UserApi.instance.loginWithKakaoAccount();
+      OAuthToken token = await UserApi.instance.loginWithKakaoAccount();
       print('카카오 계정으로 로그인 성공');
-      _printUserInfo();
+      await _printUserInfo(token);
     } catch (error) {
       print('카카오 계정으로 로그인 실패: $error');
     }
@@ -161,7 +163,7 @@ class HomeScreen extends StatelessWidget {
     print('Implement Naver login logic!');
   }
 
-  Future<void> _printUserInfo() async {
+  Future<void> _printUserInfo(OAuthToken token) async {
     try {
       User user = await UserApi.instance.me();
       print("사용자 ID: ${user.id}");
@@ -169,8 +171,35 @@ class HomeScreen extends StatelessWidget {
       print("이름: ${user.kakaoAccount?.profile?.nickname}");
       print("성별: ${user.kakaoAccount?.gender}");
       print("전화번호: ${user.kakaoAccount?.phoneNumber}");
+
+      // 사용자 정보를 서버로 전송
+      await _sendUserInfoToServer(user, token.accessToken);
     } catch (error) {
       print("사용자 정보 요청 실패: $error");
+    }
+  }
+
+  Future<void> _sendUserInfoToServer(User user, String accessToken) async {
+    final url = Uri.parse('http://172.30.1.13:8000/api');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'id': user.id,
+        'email': user.kakaoAccount?.email,
+        'name': user.kakaoAccount?.profile?.nickname,
+        'gender': user.kakaoAccount?.gender.toString(),
+        'phoneNumber': user.kakaoAccount?.phoneNumber,
+        'accessToken': accessToken,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('사용자 정보 서버 저장 성공');
+    } else {
+      print('사용자 정보 서버 저장 실패: ${response.statusCode}');
     }
   }
 }

@@ -1,6 +1,5 @@
 const cors = require("cors");
 const express = require("express");
-const path = require("path");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 require("dotenv").config();
@@ -23,13 +22,15 @@ mongoose
 // 라우터 설정
 const s3Router = require("./routes/s3.js");
 const userRouter = require("./routes/User.js");
+const kakaoLoginRouter = require('./routes/kakaoLogin.js'); // 카카오 로그인 라우터 가져오기
 
 app.use("/", s3Router);
 app.use("/", userRouter);
+app.use("/", kakaoLoginRouter); // 카카오 로그인 라우터 사용
 
-const express = require("express");
-const passport = require("passport");
-require("./kakaoLogin")(passport); // 카카오 로그인 설정 가져오기
+// 새로운 라우터 추가
+const saveUserRouter = require('./routes/saveUser.js'); // 사용자 정보를 저장하는 라우터
+app.use("/api", saveUserRouter); // 새로운 라우터 사용
 
 const PORT = 8000;
 app.listen(PORT, "0.0.0.0", () =>

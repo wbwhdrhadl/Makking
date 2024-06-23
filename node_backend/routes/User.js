@@ -71,14 +71,4 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// models/User.js
-const mongoose = require("mongoose");
-
-const KakaoUserSchema = new mongoose.Schema({
-  kakaoId: String,
-  // 추가 필드
-});
-
-module.exports = mongoose.model("User", userSchema);
-
 module.exports = app;
