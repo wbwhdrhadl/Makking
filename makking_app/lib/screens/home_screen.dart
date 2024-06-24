@@ -158,16 +158,36 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  // This function needs to be defined
-  Future<void> _loginWithNaver(BuildContext context) async {
+// Naver 로그인 함수
+Future<void> _loginWithNaver(BuildContext context) async {
+  try {
     final NaverLoginResult result = await FlutterNaverLogin.logIn();
-      if (result.status == NaverLoginStatus.loggedIn) {
-        var account = await FlutterNaverLogin.currentAccount();
-        print('로그인 성공: ${account.email}');
-      } else {
-        print('로그인 실패');
-      }
-     }
+
+    if (result.status == NaverLoginStatus.loggedIn) {
+      // 로그인 성공 시 계정 정보 가져오기
+      var account = await FlutterNaverLogin.currentAccount();
+
+      // 계정 정보에서 필요한 데이터 추출
+      String email = account.email ?? "이메일 정보 없음";
+      String name = account.name ?? "이름 정보 없음";
+      String gender = account.gender ?? "성별 정보 없음";
+      String phoneNumber = account.mobile ?? "전화번호 정보 없음";
+
+      // 콘솔에 사용자 정보 출력
+      print('로그인 성공: $email');
+      print('이름: $name');
+      print('성별: $gender');
+      print('전화번호: $phoneNumber');
+    } else {
+      // 로그인 실패 시
+      print('로그인 실패');
+    }
+  } catch (e) {
+    // 에러 처리
+    print('로그인 중 에러 발생: $e');
+  }
+}
+
 
   Future<void> _printUserInfo(OAuthToken token) async {
     try {
