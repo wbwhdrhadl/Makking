@@ -46,3 +46,4 @@ package.json
 package-lock.json
 node_modules/
 node_backend/.env
+makking_app/build/app/outputs/apk/debug/app-debug.apk
