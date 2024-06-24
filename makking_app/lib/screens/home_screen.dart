@@ -4,6 +4,7 @@ import 'broadcast_list_screen.dart';
 import 'login.dart'; // login.dart 파일을 import 합니다.
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_naver_login/flutter_naver_login.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -159,9 +160,14 @@ class HomeScreen extends StatelessWidget {
 
   // This function needs to be defined
   Future<void> _loginWithNaver(BuildContext context) async {
-    // Implement Naver login logic here
-    print('Implement Naver login logic!');
-  }
+    final NaverLoginResult result = await FlutterNaverLogin.logIn();
+      if (result.status == NaverLoginStatus.loggedIn) {
+        var account = await FlutterNaverLogin.currentAccount();
+        print('로그인 성공: ${account.email}');
+      } else {
+        print('로그인 실패');
+      }
+     }
 
   Future<void> _printUserInfo(OAuthToken token) async {
     try {
