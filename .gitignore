@@ -45,4 +45,4 @@ app.*.map.json
 package.json
 package-lock.json
 node_modules/
-.env
+node_backend/.env

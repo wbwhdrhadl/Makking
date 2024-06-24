@@ -49,6 +49,11 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        manifestPlaceholders = [
+                'YOUR_NATIVE_APP_KEY': "06227f68ca3165e60c6c3f8941c6885f",
+                'applicationName': 'io.flutter.app.FlutterApplication'
+        ]
+
     }
 
     buildTypes {
