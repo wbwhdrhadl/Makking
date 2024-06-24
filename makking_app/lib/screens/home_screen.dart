@@ -133,7 +133,7 @@ class HomeScreen extends StatelessWidget {
         },
       ),
     );
-  }
+  } // Widget build
 
   Future<void> _loginWithKakaoTalk(BuildContext context) async {
     try {
@@ -180,26 +180,38 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://172.30.1.13:8000/api');
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'id': user.id,
-        'email': user.kakaoAccount?.email,
-        'name': user.kakaoAccount?.profile?.nickname,
-        'gender': user.kakaoAccount?.gender.toString(),
-        'phoneNumber': user.kakaoAccount?.phoneNumber,
-        'accessToken': accessToken,
-      }),
-    );
+    final url = Uri.parse('http://172.30.1.13:8000/saveUser');
+    try {
+    print('서버로 전송 시작: ${jsonEncode({
+      'id': user.id,
+      'email': user.kakaoAccount?.email,
+      'name': user.kakaoAccount?.profile?.nickname,
+      'gender': user.kakaoAccount?.gender.toString(),
+      'phoneNumber': user.kakaoAccount?.phoneNumber,
+      'accessToken': accessToken,
+    })}');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'id': user.id,
+          'email': user.kakaoAccount?.email,
+          'name': user.kakaoAccount?.profile?.nickname,
+          'gender': user.kakaoAccount?.gender.toString(),
+          'phoneNumber': user.kakaoAccount?.phoneNumber,
+          'accessToken': accessToken,
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      print('사용자 정보 서버 저장 성공');
-    } else {
-      print('사용자 정보 서버 저장 실패: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        print('사용자 정보 서버 저장 성공');
+      } else {
+        print('사용자 정보 서버 저장 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('서버와의 통신 중 오류 발생: $e');
     }
   }
 }
