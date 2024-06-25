@@ -1,5 +1,5 @@
 const express = require("express");
-const app = express.Router();
+const router = express.Router();
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -31,7 +31,7 @@ UserSchema.pre("save", async function (next) {
 const User = mongoose.model("User", UserSchema, "user-login");
 
 // 회원가입 API
-app.post("/register", async (req, res) => {
+router.post("/register", async (req, res) => {
   const { username, password, name } = req.body;
   try {
     console.log("Received register request:", req.body);
@@ -51,7 +51,7 @@ app.post("/register", async (req, res) => {
 });
 
 // 로그인 API
-app.post("/login", async (req, res) => {
+router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
     let user = await User.findOne({ username });
@@ -71,4 +71,4 @@ app.post("/login", async (req, res) => {
   }
 });
 
-module.exports = app;
+module.exports = router;

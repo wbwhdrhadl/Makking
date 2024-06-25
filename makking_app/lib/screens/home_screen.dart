@@ -201,7 +201,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://43.203.251.58:5001/loginOrCreateUser');
+    final url = Uri.parse('http://43.203.251.58:5001/kakaologin');
 
     // Use the null-aware operator to avoid accessing properties on a null object.
     String? email = user.kakaoAccount?.email;
