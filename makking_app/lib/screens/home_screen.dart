@@ -206,7 +206,7 @@ Future<void> _loginWithNaver(BuildContext context) async {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://172.30.1.13:8000/saveUser');
+    final url = Uri.parse('http://43.203.251.58:5001/saveUser');
     try {
     print('서버로 전송 시작: ${jsonEncode({
       'id': user.id,

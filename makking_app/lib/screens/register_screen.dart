@@ -18,7 +18,7 @@ class RegisterScreen extends StatelessWidget {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5001/register'), // Use localhost for macOS
+        Uri.parse('http://43.203.251.58:5001/register'), // Use localhost for macOS
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
