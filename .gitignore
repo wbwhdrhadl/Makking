@@ -42,7 +42,6 @@ app.*.map.json
 /android/app/release
 
 # npm 
-package.json
 package-lock.json
 node_modules/
 node_backend/.env
