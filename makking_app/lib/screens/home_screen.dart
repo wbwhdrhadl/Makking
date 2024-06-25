@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-import 'broadcast_list_screen.dart';
-import 'login.dart'; // login.dart 파일을 import 합니다.
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
+import 'broadcast_list_screen.dart';
+import 'login.dart'; // login.dart 파일을 import 합니다.
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -158,36 +158,32 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-// Naver 로그인 함수
-Future<void> _loginWithNaver(BuildContext context) async {
-  try {
-    final NaverLoginResult result = await FlutterNaverLogin.logIn();
-
-    if (result.status == NaverLoginStatus.loggedIn) {
-      // 로그인 성공 시 계정 정보 가져오기
-      var account = await FlutterNaverLogin.currentAccount();
-
-      // 계정 정보에서 필요한 데이터 추출
-      String email = account.email ?? "이메일 정보 없음";
-      String name = account.name ?? "이름 정보 없음";
-      String gender = account.gender ?? "성별 정보 없음";
-      String phoneNumber = account.mobile ?? "전화번호 정보 없음";
-
-      // 콘솔에 사용자 정보 출력
-      print('로그인 성공: $email');
-      print('이름: $name');
-      print('성별: $gender');
-      print('전화번호: $phoneNumber');
-    } else {
-      // 로그인 실패 시
-      print('로그인 실패');
+  // Naver 로그인 함수
+  Future<void> _loginWithNaver(BuildContext context) async {
+    try {
+      final NaverLoginResult result = await FlutterNaverLogin.logIn();
+      if (result.status == NaverLoginStatus.loggedIn) {
+        // 로그인 성공 시 계정 정보 가져오기
+        var account = await FlutterNaverLogin.currentAccount();
+        // 계정 정보에서 필요한 데이터 추출
+        String email = account.email ?? "이메일 정보 없음";
+        String name = account.name ?? "이름 정보 없음";
+        String gender = account.gender ?? "성별 정보 없음";
+        String phoneNumber = account.mobile ?? "전화번호 정보 없음";
+        // 콘솔에 사용자 정보 출력
+        print('로그인 성공: $email');
+        print('이름: $name');
+        print('성별: $gender');
+        print('전화번호: $phoneNumber');
+      } else {
+        // 로그인 실패 시
+        print('로그인 실패');
+      }
+    } catch (e) {
+      // 에러 처리
+      print('로그인 중 에러 발생: $e');
     }
-  } catch (e) {
-    // 에러 처리
-    print('로그인 중 에러 발생: $e');
   }
-}
-
 
   Future<void> _printUserInfo(OAuthToken token) async {
     try {
@@ -197,7 +193,6 @@ Future<void> _loginWithNaver(BuildContext context) async {
       print("이름: ${user.kakaoAccount?.profile?.nickname}");
       print("성별: ${user.kakaoAccount?.gender}");
       print("전화번호: ${user.kakaoAccount?.phoneNumber}");
-
       // 사용자 정보를 서버로 전송
       await _sendUserInfoToServer(user, token.accessToken);
     } catch (error) {
@@ -206,29 +201,32 @@ Future<void> _loginWithNaver(BuildContext context) async {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://43.203.251.58:5001/saveUser');
-    try {
-    print('서버로 전송 시작: ${jsonEncode({
-      'id': user.id,
-      'email': user.kakaoAccount?.email,
-      'name': user.kakaoAccount?.profile?.nickname,
-      'gender': user.kakaoAccount?.gender.toString(),
-      'phoneNumber': user.kakaoAccount?.phoneNumber,
+    final url = Uri.parse('http://43.203.251.58:5001/loginOrCreateUser');
+
+    // Use the null-aware operator to avoid accessing properties on a null object.
+    String? email = user.kakaoAccount?.email;
+    String? name = user.kakaoAccount?.profile?.nickname;
+    String? phoneNumber = user.kakaoAccount?.phoneNumber;
+
+    // Convert the Gender enum to a string safely, handling potential nulls.
+    String genderStr = user.kakaoAccount?.gender?.toString().split('.').last ?? "Not specified";
+
+    Map<String, dynamic> userData = {
+      'userId': user.id.toString(), // Convert ID to string
+      'email': email ?? "No email provided", // Provide a default value if null
+      'name': name ?? "No name provided",
+      'gender': genderStr,
+      'phoneNumber': phoneNumber ?? "No phone number provided",
       'accessToken': accessToken,
-    })}');
+    };
+
+
+    try {
+      print('서버로 전송 시작: ${jsonEncode(userData)}');
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'id': user.id,
-          'email': user.kakaoAccount?.email,
-          'name': user.kakaoAccount?.profile?.nickname,
-          'gender': user.kakaoAccount?.gender.toString(),
-          'phoneNumber': user.kakaoAccount?.phoneNumber,
-          'accessToken': accessToken,
-        }),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(userData),
       );
 
       if (response.statusCode == 200) {
