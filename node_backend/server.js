@@ -28,5 +28,5 @@ app.use("/", userRouter);
 app.use("/", kakaoLoginRouter);
 app.use("/", saveUserRouter);
 
-const PORT = 8000;
+const PORT = 5001;
 app.listen(PORT, "0.0.0.0", () => console.log(`Server started on port ${PORT}`));
