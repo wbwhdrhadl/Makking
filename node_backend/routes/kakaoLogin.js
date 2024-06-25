@@ -9,7 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 module.exports = () => {
     passport.use(new KakaoStrategy({
         clientID: process.env.KAKAO_ID,
-        callbackURL: 'http://172.30.1.13:8000/auth/kakao/callback',
+        callbackURL: 'http://43.203.251.58:8000/auth/kakao/callback',
     }, async (accessToken, refreshToken, profile, done) => {
         console.log('Kakao profile:', profile);
         try {
