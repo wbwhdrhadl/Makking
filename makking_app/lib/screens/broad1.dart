@@ -1,24 +1,69 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-void main() {
-  runApp(MyApp());
-}
+class Broadcast1 extends StatefulWidget {
+  final String broadcastName;
 
-class MyApp extends StatelessWidget {
+  Broadcast1({required this.broadcastName});
+
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Broadcasting Platform',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: Broadcast1(),
-    );
-  }
+  _Broadcast1State createState() => _Broadcast1State();
 }
 
-class Broadcast1 extends StatelessWidget {
+class _Broadcast1State extends State<Broadcast1> {
   final TextEditingController _controller = TextEditingController();
+  final List<String> _messages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMessages();
+  }
+
+  Future<void> _fetchMessages() async {
+    try {
+      final response = await http.get(Uri.parse(
+          'http://localhost:5001/messages/${widget.broadcastName}')); // 여기서 IP 주소를 변경
+      if (response.statusCode == 200) {
+        List<dynamic> messages = json.decode(response.body);
+        List<String> messageList = messages.map((msg) {
+          if (msg is Map<String, dynamic> && msg.containsKey('message')) {
+            return msg['message'] as String;
+          } else {
+            return '메시지 없음';
+          }
+        }).toList();
+        setState(() {
+          _messages.addAll(messageList);
+        });
+      } else {
+        print('Failed to load messages: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching messages: $e');
+    }
+  }
+
+  Future<void> _sendMessage(String message) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'http://localhost:5001/messages/${widget.broadcastName}'), // 여기서 IP 주소를 변경
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'message': message}),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _messages.add(message);
+        });
+      } else {
+        print('Failed to send message: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error sending message: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,15 +108,12 @@ class Broadcast1 extends StatelessWidget {
                         ),
                       ),
                       Expanded(
-                        child: ListView(
+                        child: ListView.builder(
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
-                          children: [
-                            ChatMessage(message: '안녕하세요'),
-                            ChatMessage(message: '좋아요!'),
-                            ChatMessage(message: '방송 재밌네요!'),
-                            ChatMessage(message: '다음 방송 언제인가요?'),
-                            ChatMessage(message: '이 채팅 좋네요!'),
-                          ],
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            return ChatMessage(message: _messages[index]);
+                          },
                         ),
                       ),
                       Padding(
@@ -97,15 +139,14 @@ class Broadcast1 extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 10),
-                            IconButton(
-                              icon: Icon(Icons.send, color: Colors.blue),
+                            ElevatedButton(
+                              child: Text('메시지 전송'),
                               onPressed: () {
-                                // Add functionality to send the message
                                 String message = _controller.text;
-                                // Clear the input field
-                                _controller.clear();
-                                // Handle the message sending logic
-                                print('Message sent: $message');
+                                if (message.isNotEmpty) {
+                                  _sendMessage(message);
+                                  _controller.clear();
+                                }
                               },
                             ),
                           ],

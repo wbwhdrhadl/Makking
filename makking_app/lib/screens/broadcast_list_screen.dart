@@ -76,7 +76,7 @@ class BroadcastListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => Broadcast1(),
+                  builder: (context) => Broadcast1(broadcastName: '와꾸대장봉준'),
                 ), // 방송 화면으로 이동
               );
             },
@@ -91,7 +91,7 @@ class BroadcastListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => Broadcast2(),
+                  builder: (context) => Broadcast1(broadcastName: '이다군이다은'),
                 ), // 방송 화면으로 이동
               );
             },
