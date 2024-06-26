@@ -21,16 +21,15 @@ mongoose.connect(mongoURI, {
 // 라우터 설정
 const chatRouter = require("./routes/chat.js"); 
 const s3Router = require("./routes/s3.js");
-const kakaoUserRouter = require("./routes/kakaoUser.js");
-const kakaoLoginRouter = require("./routes/kakaoLogin.js");
 const userRouter = require("./routes/User.js");
+const kakaoUserRouter = require("./routes/kakaoUser.js");
+
 // chat.js의 경로 확인
 
 app.use("/", chatRouter);
 app.use("/", s3Router);
 app.use("/", kakaoUserRouter);
 app.use("/", userRouter);
-app.use("/", kakaoLoginRouter); 
 
 
 const PORT = 5001;
