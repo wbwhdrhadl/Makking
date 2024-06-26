@@ -27,6 +27,41 @@ class MyApp extends StatelessWidget {
 }
 
 class BroadcastListScreen extends StatelessWidget {
+  final List<LiveStreamTile> broadcastList = [
+    LiveStreamTile(
+      profileImage: 'assets/img3.jpeg',
+      streamerName: '와꾸대장봉준',
+      description: '봉준 60만개빵 무창클럽 vs 연합팀 [4경기 점니 3 vs 0 햇살] 스타',
+      viewers: 56880,
+      thumbnail: 'assets/img2.jpeg',
+      broadcastName: '와꾸대장봉준',
+      onTap: (BuildContext context) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Broadcast1(broadcastName: '와꾸대장봉준'),
+          ),
+        );
+      },
+    ),
+    LiveStreamTile(
+      profileImage: 'assets/img4.jpeg',
+      streamerName: '이다군이다은',
+      description: '대학교 등교길 같이 탐험 ㄱㄱ',
+      viewers: 233,
+      thumbnail: 'assets/img1.jpeg',
+      broadcastName: '이다군이다은',
+      onTap: (BuildContext context) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Broadcast1(broadcastName: '이다군이다은'),
+          ),
+        );
+      },
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,47 +97,19 @@ class BroadcastListScreen extends StatelessWidget {
             onPressed: () {
               showSearch(
                 context: context,
-                delegate: CustomSearchDelegate(),
+                delegate: CustomSearchDelegate(broadcastList: broadcastList),
               );
             },
           ),
         ],
       ),
       body: ListView(
-        children: [
-          LiveStreamTile(
-            profileImage: 'assets/img3.jpeg',
-            streamerName: '와꾸대장봉준',
-            description: '봉준 60만개빵 무창클럽 vs 연합팀 [4경기 점니 3 vs 0 햇살] 스타',
-            viewers: 56880,
-            thumbnail: 'assets/img2.jpeg',
-            broadcastName: '와꾸대장봉준',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => Broadcast1(broadcastName: '와꾸대장봉준'),
-                ),
-              );
-            },
-          ),
-          LiveStreamTile(
-            profileImage: 'assets/img4.jpeg',
-            streamerName: '이다군이다은',
-            description: '대학교 등교길 같이 탐험 ㄱㄱ',
-            viewers: 233,
-            thumbnail: 'assets/img1.jpeg',
-            broadcastName: '이다군이다은',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => Broadcast1(broadcastName: '이다군이다은'),
-                ),
-              );
-            },
-          ),
-        ],
+        children: broadcastList
+            .map((broadcast) => InkWell(
+                  onTap: () => broadcast.onTap(context),
+                  child: broadcast,
+                ))
+            .toList(),
       ),
       bottomNavigationBar: BottomAppBar(
         child: Row(
@@ -119,7 +126,7 @@ class BroadcastListScreen extends StatelessWidget {
               onPressed: () {
                 showSearch(
                   context: context,
-                  delegate: CustomSearchDelegate(),
+                  delegate: CustomSearchDelegate(broadcastList: broadcastList),
                 );
               },
             ),
@@ -148,7 +155,7 @@ class LiveStreamTile extends StatefulWidget {
   final int viewers;
   final String thumbnail;
   final String broadcastName;
-  final VoidCallback onTap;
+  final Function(BuildContext) onTap;
 
   LiveStreamTile({
     required this.profileImage,
@@ -233,7 +240,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
       child: InkWell(
         onTap: () {
           incrementViewers();
-          widget.onTap();
+          widget.onTap(context);
         },
         child: Column(
           children: [
@@ -274,6 +281,10 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
 }
 
 class CustomSearchDelegate extends SearchDelegate {
+  final List<LiveStreamTile> broadcastList;
+
+  CustomSearchDelegate({required this.broadcastList});
+
   @override
   List<Widget> buildActions(BuildContext context) {
     return [
@@ -299,24 +310,42 @@ class CustomSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    return Center(
-      child: Text(
-        'Search results for: $query',
-        style: TextStyle(fontSize: 24),
-      ),
+    List<LiveStreamTile> results = broadcastList.where((broadcast) {
+      return broadcast.streamerName.toLowerCase().contains(query.toLowerCase());
+    }).toList();
+
+    return ListView(
+      children: results.map((broadcast) {
+        return ListTile(
+          title: Text(broadcast.streamerName),
+          subtitle: Text(broadcast.description),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    Broadcast1(broadcastName: broadcast.broadcastName),
+              ),
+            );
+          },
+        );
+      }).toList(),
     );
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    List<String> suggestions = ['이다군이다은', '오킹의 걸어서 땅끝까지', '김나영의 논산 논쟁'];
+    List<LiveStreamTile> suggestions = broadcastList.where((broadcast) {
+      return broadcast.streamerName.toLowerCase().contains(query.toLowerCase());
+    }).toList();
+
     return ListView.builder(
       itemCount: suggestions.length,
       itemBuilder: (context, index) {
         return ListTile(
-          title: Text(suggestions[index]),
+          title: Text(suggestions[index].streamerName),
           onTap: () {
-            query = suggestions[index];
+            query = suggestions[index].streamerName;
             showResults(context);
           },
         );
