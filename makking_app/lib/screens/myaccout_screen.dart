@@ -1,22 +1,5 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Account Settings',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: AccountSettingsScreen(),
-    );
-  }
-}
-
 class AccountSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -60,7 +43,7 @@ class AccountSettingsScreen extends StatelessWidget {
           ListTile(
             leading: CircleAvatar(
               radius: 25,
-              backgroundImage: AssetImage('../assets/img4.jpeg'), // 프로필 이미지 경로
+              backgroundImage: AssetImage('assets/img4.jpeg'), // 프로필 이미지 경로
             ),
             title: Text('프로필'),
             subtitle: Text('이다군이다은'),
