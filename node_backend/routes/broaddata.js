@@ -1,17 +1,13 @@
 const express = require('express');
-const cors = require('cors');
 const router = express.Router();
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 
-// CORS를 모든 도메인에서 허용하도록 설정
-router.use(cors());
-
-// 메시지 스키마 및 모델 - 좋아요 필드 추가
+// 메시지 스키마 및 모델 - 좋아요 필드 및 시청자 수 필드 추가
 const MessageSchema = new mongoose.Schema({
-  broadcastName: String,
+  broadcastName: { type: String, required: true },
   messages: [{ message: String, createdAt: { type: Date, default: Date.now } }],
-  likes: { type: Number, default: 0 } // 좋아요 필드 추가
+  likes: { type: Number, default: 0 }, // 좋아요 필드 추가
+  viewers: { type: Number, default: 0 } // 시청자 수 필드 추가
 });
 
 const Message = mongoose.model('Message', MessageSchema);
@@ -39,7 +35,7 @@ router.post('/messages/:broadcastName', async (req, res) => {
   try {
     const updatedMessage = await Message.findOneAndUpdate(
       { broadcastName },
-      { $push: { messages: { message } }, $setOnInsert: { likes: 0 } },
+      { $push: { messages: { message } }, $setOnInsert: { likes: 0, viewers: 0 } },
       { new: true, upsert: true }
     );
     res.send(updatedMessage);
@@ -68,15 +64,23 @@ router.post('/messages/:broadcastName/like', async (req, res) => {
   }
 });
 
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/makking';
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log("MongoDB 연결 성공"))
-  .catch((err) => {
-    console.log("MongoDB 연결 오류:", err);
-    process.exit(1);
-  });
+// 시청자 수 업데이트 라우트
+router.post('/messages/:broadcastName/viewers', async (req, res) => {
+  const { broadcastName } = req.params;
+  try {
+    const updatedMessage = await Message.findOneAndUpdate(
+      { broadcastName },
+      { $inc: { viewers: 1 } }, // 시청자 수 1 증가
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+    if (!updatedMessage) {
+      return res.status(404).send({ error: 'No broadcast found to update viewers' });
+    }
+    res.send(updatedMessage);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error.message);
+  }
+});
 
 module.exports = router;

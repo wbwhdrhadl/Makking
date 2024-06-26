@@ -166,14 +166,15 @@ class LiveStreamTile extends StatefulWidget {
 
 class _LiveStreamTileState extends State<LiveStreamTile> {
   int likes = 0;
+  int viewers = 0;
 
   @override
   void initState() {
     super.initState();
-    fetchLikes();
+    fetchData();
   }
 
-  Future<void> fetchLikes() async {
+  Future<void> fetchData() async {
     try {
       var response = await http.get(
           Uri.parse('http://localhost:5001/messages/${widget.broadcastName}'));
@@ -181,12 +182,13 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
         var data = json.decode(response.body);
         setState(() {
           likes = data['likes'] ?? 0;
+          viewers = data['viewers'] ?? widget.viewers;
         });
       } else {
-        print('Failed to load likes');
+        print('Failed to load data');
       }
     } catch (e) {
-      print('Error fetching likes: $e');
+      print('Error fetching data: $e');
     }
   }
 
@@ -207,12 +209,32 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
     }
   }
 
+  void incrementViewers() async {
+    try {
+      var response = await http.post(Uri.parse(
+          'http://localhost:5001/messages/${widget.broadcastName}/viewers'));
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        setState(() {
+          viewers = data['viewers'];
+        });
+      } else {
+        print('Failed to increment viewers');
+      }
+    } catch (e) {
+      print('Error incrementing viewers: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.all(10),
       child: InkWell(
-        onTap: widget.onTap,
+        onTap: () {
+          incrementViewers();
+          widget.onTap();
+        },
         child: Column(
           children: [
             ListTile(
@@ -221,7 +243,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
               ),
               title: Text(widget.streamerName),
               subtitle: Text(widget.description),
-              trailing: Text('🔴 ${widget.viewers} viewers'),
+              trailing: Text('🔴 $viewers viewers'),
             ),
             Container(
               height: 150,
