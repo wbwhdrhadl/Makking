@@ -19,7 +19,7 @@ mongoose.connect(mongoURI, {
   .catch((err) => console.log("MongoDB 연결 오류:", err));
 
 // 라우터 설정
-const chatRouter = require("./routes/chat.js"); 
+const chatRouter = require("./routes/broaddata.js"); 
 const s3Router = require("./routes/s3.js");
 const userRouter = require("./routes/User.js");
 const kakaoUserRouter = require("./routes/kakaoUser.js");
