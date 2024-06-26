@@ -316,9 +316,7 @@ class CustomSearchDelegate extends SearchDelegate {
 
     return ListView(
       children: results.map((broadcast) {
-        return ListTile(
-          title: Text(broadcast.streamerName),
-          subtitle: Text(broadcast.description),
+        return InkWell(
           onTap: () {
             Navigator.push(
               context,
@@ -328,6 +326,7 @@ class CustomSearchDelegate extends SearchDelegate {
               ),
             );
           },
+          child: broadcast,
         );
       }).toList(),
     );
