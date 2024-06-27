@@ -75,7 +75,7 @@ class BroadcastListScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) =>
-                      FaceRecognitionScreen(title: '얼굴 인식 화면'),
+                      BroadcastScreen(),
                 ),
               );
             },
