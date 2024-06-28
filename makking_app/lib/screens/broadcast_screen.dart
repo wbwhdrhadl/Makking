@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:image/image.dart' as imglib;
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
 
 class BroadcastScreen extends StatefulWidget {
@@ -14,124 +15,100 @@ class BroadcastScreen extends StatefulWidget {
 class _BroadcastScreenState extends State<BroadcastScreen> {
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
-  final _channel = WebSocketChannel.connect(
-    Uri.parse('ws://172.30.1.13:5002'),
-  );
-  int selectedCameraIndex = 0; // 선택된 카메라 인덱스 초기화
-  bool isStreaming = false; // 스트리밍 상태
-  Timer? _timer; // 타이머 객체
+  IO.Socket? _socket;
+  bool isStreaming = false;
+  Timer? _timer;
   String serverMessage = '';
 
   @override
   void initState() {
     super.initState();
     initializeCamera();
-    _channel.stream.listen((message) {
-      setState(() {
-        serverMessage = message;
+    initializeSocket();
+  }
+
+  void initializeSocket() {
+    _socket = IO.io('http://172.30.1.13:5001', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+    _socket!.connect();
+
+    _socket!.on('connect', (_) {
+      print('connect');
+      _socket!.on('receive_message', (data) {
+        setState(() {
+          serverMessage = data;
+        });
       });
     });
+
+    _socket!.on('disconnect', (_) => print('disconnect'));
+    _socket!.on('fromServer', (_) => print(_));
   }
 
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
-    CameraDescription? frontCamera;
-    for (var camera in _cameras) {
-      if (camera.lensDirection == CameraLensDirection.front) {
-        frontCamera = camera;
-        break;
-      }
-    }
-
-    if (frontCamera != null) {
-      _cameraController = CameraController(frontCamera, ResolutionPreset.high);
+    if (_cameras.isNotEmpty) {
+      _cameraController = CameraController(_cameras.first, ResolutionPreset.medium);
       await _cameraController!.initialize();
       setState(() {});
     } else {
-      print("전방 카메라를 찾을 수 없습니다.");
-    }
-  }
-
-  void toggleCamera() async {
-    if (_cameras.isEmpty) {
-      print("카메라를 찾을 수 없습니다.");
-      return;
-    }
-
-    // 현재 카메라의 방향을 기반으로 새 카메라 결정
-    CameraLensDirection currentDirection = _cameraController?.description.lensDirection ?? CameraLensDirection.front;
-    CameraDescription newCamera = _cameras.firstWhere(
-      (camera) => camera.lensDirection != currentDirection,
-      orElse: () => _cameras.first // 적절한 카메라를 찾지 못하면 첫 번째 카메라를 선택
-    );
-
-    if (newCamera == null) {
-      print("적합한 카메라를 찾을 수 없습니다.");
-      return;
-    }
-
-    // 이전 컨트롤러를 해제하고 새 컨트롤러로 업데이트
-    await _cameraController?.dispose();
-
-    _cameraController = CameraController(
-      newCamera,
-      ResolutionPreset.high,
-      enableAudio: false // 오디오는 비활성화
-    );
-
-    try {
-      await _cameraController!.initialize();
-    } catch (e) {
-      print("카메라 초기화 실패: $e");
-      return;
-    }
-
-    // 상태 업데이트 및 스트리밍 재시작
-    if (mounted) {
-      setState(() {});
-      if (isStreaming) {
-        startStreaming();
-      }
+      print("No cameras available");
     }
   }
 
   void startStreaming() {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      print("Camera is not initialized.");
       return;
     }
-
-    _timer = Timer.periodic(Duration(milliseconds: 100), (timer) async {
-      if (!_cameraController!.value.isStreamingImages) {
-        await _cameraController!.startImageStream((CameraImage image) async {
-          final width = image.planes[0].width ?? 0;
-          final height = image.planes[0].height ?? 0;
-
-          if (width == 0 || height == 0) return;
-
-          final img = imglib.Image.fromBytes(
-            width,
-            height,
-            image.planes[0].bytes,
-            format: imglib.Format.bgra,
-          );
-
-          List<int> png = imglib.encodePng(img);
-          Uint8List data = Uint8List.fromList(png);
-
-          _channel.sink.add(base64Encode(data));
-        });
+    _cameraController!.startImageStream((CameraImage image) {
+      if (!isStreaming) {
+        isStreaming = true;
+        processImage(image);
       }
     });
   }
 
-  void stopStreaming() {
-    _timer?.cancel();
-    _timer = null;
-    _cameraController?.stopImageStream();
+  Future<void> processImage(CameraImage image) async {
+    var img = await compute(convertYUV420toImage, image);
+    if (img != null) {
+      final resizedImg = imglib.copyResize(img, width: 640, height: 360);
+      List<int> png = imglib.encodePng(resizedImg);
+      Uint8List data = Uint8List.fromList(png);
+      _socket!.emit('stream_image', base64Encode(data));
+    }
+    await Future.delayed(Duration(milliseconds: 500)); // Adjust the frame rate
     isStreaming = false;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => BroadcastListScreen()),
-    );
+  }
+
+  static imglib.Image? convertYUV420toImage(CameraImage image) {
+    try {
+      final img = imglib.Image(image.width, image.height);
+      for (int i = 0; i < image.width * image.height; i++) {
+        img.data[i] = 0xFF000000 | (image.planes[0].bytes[i] << 16) | (image.planes[0].bytes[i] << 8) | image.planes[0].bytes[i];
+      }
+      return img;
+    } catch (e) {
+      print("Error converting YUV420 to image: $e");
+      return null;
+    }
+  }
+
+  void stopStreaming() {
+    _cameraController?.stopImageStream();
+    setState(() {
+      isStreaming = false;
+    });
+  }
+
+  void toggleStreaming() {
+    if (isStreaming) {
+      stopStreaming();
+    } else {
+      startStreaming();
+    }
   }
 
   @override
@@ -142,141 +119,46 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
-          onTap: () {
-            if (isStreaming) {
-              stopStreaming();
-            } else {
-              startStreaming();
-            }
-            setState(() {
-              isStreaming = !isStreaming;
-            });
-          },
-          child: Text(isStreaming ? '방송 종료' : '방송 시작'),
+          onTap: toggleStreaming,
+          child: Text(isStreaming ? 'Stop Broadcasting' : 'Start Broadcasting'),
         ),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.switch_camera),
-            onPressed: toggleCamera, // 카메라 전환 버튼
+            onPressed: toggleCamera,
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          CameraPreview(_cameraController!),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: 300, // 채팅 창의 높이 조정
-              color: Colors.black54,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(10),
-                    child: Text(
-                      '방송 규칙: 채팅 여러번 치기 금지, 다들 좋은 방방 관람 하세요 ~',
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        ChatMessage(message: '안녕하세요'),
-                        ChatMessage(message: '좋아요!'),
-                        ChatMessage(message: '방송 재밌네요!'),
-                        ChatMessage(message: '다음 방송 언제인가요?'),
-                        ChatMessage(message: '이 채팅 좋네요!'),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '서버 메시지: $serverMessage',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 10,
-            left: 10,
-            right: 10,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                FilterButton(label: '필터 적용', imagePath: 'assets/img3.jpeg'),
-                FilterButton(label: '필터 적용', imagePath: 'assets/img4.jpeg'),
-                FilterButton(label: '필터 적용', imagePath: 'assets/img3.jpeg'),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: CameraPreview(_cameraController!),
     );
+  }
+
+  void toggleCamera() async {
+    if (_cameras.isEmpty) {
+      print("No cameras available");
+      return;
+    }
+
+    CameraLensDirection currentDirection = _cameraController?.description.lensDirection ?? CameraLensDirection.front;
+    CameraDescription newCamera = _cameras.firstWhere(
+      (camera) => camera.lensDirection != currentDirection,
+      orElse: () => _cameras.first,
+    );
+
+    await _cameraController?.dispose();
+    _cameraController = CameraController(newCamera, ResolutionPreset.medium);
+    await _cameraController!.initialize();
+    if (isStreaming) {
+      startStreaming();
+    }
+    setState(() {});
   }
 
   @override
   void dispose() {
     _cameraController?.dispose();
-    _channel.sink.close();
+    _socket?.disconnect();
+    _timer?.cancel();
     super.dispose();
-  }
-}
-
-class ChatMessage extends StatelessWidget {
-  final String message;
-
-  ChatMessage({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Text(
-        message,
-        style: TextStyle(color: Colors.white),
-      ),
-    );
-  }
-}
-
-class FilterButton extends StatelessWidget {
-  final String label;
-  final String imagePath;
-
-  FilterButton({required this.label, required this.imagePath});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(
-          backgroundImage: AssetImage(imagePath),
-          radius: 20,
-        ),
-        SizedBox(height: 5),
-        ElevatedButton(
-          onPressed: () {
-            // 필터 적용 로직 추가
-          },
-          child: Text(label),
-        ),
-      ],
-    );
-  }
-}
-
-class BroadcastListScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Broadcast List'),
-      ),
-      body: Center(
-        child: Text('Broadcast List Screen'),
-      ),
-    );
   }
 }
