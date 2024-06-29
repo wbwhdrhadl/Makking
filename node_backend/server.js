@@ -14,33 +14,47 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// MongoDB 연결 설정
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/makking';
+mongoose.connect(mongoURI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("MongoDB 연결 성공"))
+  .catch((err) => console.log("MongoDB 연결 오류:", err));
+
+// Socket.IO 핸들링
 io.on('connection', (socket) => {
-  console.log('A new client has connected!');
+  console.log('새로운 클라이언트가 연결되었습니다!');
 
   socket.on('stream_image', (imageBase64) => {
     axios.post('http://172.30.1.13:5003/process_image', {
       image: imageBase64
     })
     .then(response => {
-      console.log('Image processing successful');
+      console.log('이미지 처리 성공');
       socket.emit('receive_message', response.data.processed_image);
     })
     .catch(error => {
-      console.error('Error processing image:', error);
-      socket.emit('receive_message', 'Error processing image');
+      console.error('이미지 처리 오류:', error);
+      socket.emit('receive_message', '이미지 처리 오류');
     });
   });
 
-  socket.on('disconnect', () => console.log('Client disconnected'));
+  socket.on('disconnect', () => console.log('클라이언트 연결 해제'));
 });
 
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/makking';
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log("MongoDB connection error:", err));
+// 라우터 설정
+const chatRouter = require("./routes/broaddata.js");
+const s3Router = require("./routes/s3.js");
+const userRouter = require("./routes/User.js");
+const kakaoUserRouter = require("./routes/kakaoUser.js");
 
+app.use("/", chatRouter);
+app.use("/", s3Router);
+app.use("/", kakaoUserRouter);
+app.use("/", userRouter);
+
+// 포트 설정 및 서버 시작
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+server.listen(PORT, () => console.log(`서버가 포트 ${PORT}에서 시작되었습니다`));
