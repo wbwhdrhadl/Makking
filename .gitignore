@@ -45,3 +45,8 @@ app.*.map.json
 package-lock.json
 node_modules/
 node_backend/.env
+python_backend/venv/
+python_backend/venv/Lib/
+python_backend/venv/Lib/site-packages/
+python_backend/venv/Lib
+python_backend/venv/Lib/site-packages/annotated_types-0.7.0.dist-info/RECORD
