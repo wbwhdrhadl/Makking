@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import cv2
 import numpy as np
 import torch
-import base64  # base64 모듈 import 추가
+import base64
 from yolo5face.get_model import get_model
 import face_recognition
 from sklearn.metrics.pairwise import cosine_similarity
@@ -35,15 +35,20 @@ async def process_image(data: ImageData):
 def handle_image(image):
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     boxes, _, _ = model(rgb_image, target_size=512)
+    print(f"Detected {len(boxes)} faces")  # 감지된 얼굴 수 출력
 
     if not boxes:
         return image  # 얼굴을 찾지 못한 경우 원본 이미지 반환
 
     for box in boxes:
         x1, y1, x2, y2 = map(int, box)
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 3)
+        face_region = image[y1:y2, x1:x2]
+        blurred_face = cv2.GaussianBlur(face_region, (99, 99), 30)  # 블러 처리 강도와 크기를 조정
+        image[y1:y2, x1:x2] = blurred_face  # 원본 이미지에 블러 처리된 얼굴 적용
+        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # 바운딩 박스
 
     return image
+
 
 if __name__ == "__main__":
     import uvicorn
