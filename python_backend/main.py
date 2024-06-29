@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import cv2
 import numpy as np
 import torch
+import base64  # base64 모듈 import 추가
 from yolo5face.get_model import get_model
 import face_recognition
 from sklearn.metrics.pairwise import cosine_similarity
@@ -18,7 +19,7 @@ class ImageData(BaseModel):
 @app.post("/process_image")
 async def process_image(data: ImageData):
     try:
-        img_data = base64.b64decode(data.image)
+        img_data = base64.b64decode(data.image)  # base64 디코딩
         nparr = np.frombuffer(img_data, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -26,7 +27,7 @@ async def process_image(data: ImageData):
         processed_image = handle_image(img)
 
         _, buffer = cv2.imencode('.jpg', processed_image)
-        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+        jpg_as_text = base64.b64encode(buffer).decode('utf-8')  # base64 인코딩
         return {"processed_image": jpg_as_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
