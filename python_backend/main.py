@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import torch
 import base64
+from datetime import datetime
 from yolo5face.get_model import get_model
 import face_recognition
 from sklearn.metrics.pairwise import cosine_similarity
@@ -26,6 +27,12 @@ async def process_image(data: ImageData):
         # 이미지 처리 함수 호출
         processed_image = handle_image(img)
 
+        # Save the processed image
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f'processed_{timestamp}.jpg'
+        cv2.imwrite(filename, processed_image)
+        print(f"Saved processed image as {filename}")
+
         _, buffer = cv2.imencode('.jpg', processed_image)
         jpg_as_text = base64.b64encode(buffer).decode('utf-8')  # base64 인코딩
         return {"processed_image": jpg_as_text}
@@ -38,7 +45,8 @@ def handle_image(image):
     print(f"Detected {len(boxes)} faces")  # 감지된 얼굴 수 출력
 
     if not boxes:
-        return image  # 얼굴을 찾지 못한 경우 원본 이미지 반환
+         print("if not boxes")
+         return image
 
     for box in boxes:
         x1, y1, x2, y2 = map(int, box)
@@ -46,9 +54,9 @@ def handle_image(image):
         blurred_face = cv2.GaussianBlur(face_region, (99, 99), 30)  # 블러 처리 강도와 크기를 조정
         image[y1:y2, x1:x2] = blurred_face  # 원본 이미지에 블러 처리된 얼굴 적용
         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # 바운딩 박스
+        print("blur complete!")
 
     return image
-
 
 if __name__ == "__main__":
     import uvicorn

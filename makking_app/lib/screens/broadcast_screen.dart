@@ -19,6 +19,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   bool isStreaming = false;
   Timer? _timer;
   String serverMessage = '';
+  Image? processedImage; // 추가: 서버로부터 받은 이미지를 저장할 변수
 
   @override
   void initState() {
@@ -35,22 +36,23 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     _socket!.connect();
 
     _socket!.on('connect', (_) {
-      print('connect');
+      print('Connected');
       _socket!.on('receive_message', (data) {
         setState(() {
           serverMessage = data;
+          processedImage = Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
         });
       });
     });
 
-    _socket!.on('disconnect', (_) => print('disconnect'));
+    _socket!.on('disconnect', (_) => print('Disconnected'));
     _socket!.on('fromServer', (_) => print(_));
   }
 
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
     if (_cameras.isNotEmpty) {
-      _cameraController = CameraController(_cameras.first, ResolutionPreset.medium);
+      _cameraController = CameraController(_cameras.first, ResolutionPreset.high);
       await _cameraController!.initialize();
       setState(() {});
     } else {
@@ -74,8 +76,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   Future<void> processImage(CameraImage image) async {
     var img = await compute(convertYUV420toImage, image);
     if (img != null) {
-      final resizedImg = imglib.copyResize(img, width: 640, height: 360);
-      List<int> png = imglib.encodePng(resizedImg);
+      List<int> png = imglib.encodePng(img);
       Uint8List data = Uint8List.fromList(png);
       _socket!.emit('stream_image', base64Encode(data));
     }
@@ -113,9 +114,6 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -129,7 +127,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
           ),
         ],
       ),
-      body: CameraPreview(_cameraController!),
+      body: processedImage ?? CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
     );
   }
 
@@ -146,7 +144,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     );
 
     await _cameraController?.dispose();
-    _cameraController = CameraController(newCamera, ResolutionPreset.medium);
+    _cameraController = CameraController(newCamera, ResolutionPreset.high);
     await _cameraController!.initialize();
     if (isStreaming) {
       startStreaming();
