@@ -49,11 +49,14 @@ const chatRouter = require("./routes/broaddata.js");
 const s3Router = require("./routes/s3.js");
 const userRouter = require("./routes/User.js");
 const kakaoUserRouter = require("./routes/kakaoUser.js");
+const naverLoginRouter = require('./routes/naverUser.js'); // 경로는 실제 파일 위치에 따라 다를 수 있습니다.
 
+app.use('/', naverLoginRouter);
 app.use("/", chatRouter);
 app.use("/", s3Router);
 app.use("/", kakaoUserRouter);
 app.use("/", userRouter);
+
 
 // 포트 설정 및 서버 시작
 const PORT = process.env.PORT || 5001;
