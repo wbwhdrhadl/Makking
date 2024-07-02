@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'broadcast_list_screen.dart'; // BroadcastListScreen을 임포트
 import 'register_screen.dart'; // 새로 만든 RegisterScreen을 임포트
 
@@ -27,6 +28,8 @@ class LoginScreen extends StatelessWidget {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('Login successful: ${data['msg']}');
+        await _saveSessionData(
+            _usernameController.text, _passwordController.text);
         _showWelcomeDialog(context, _usernameController.text);
       } else {
         print('Login failed: ${response.body}');
@@ -36,6 +39,12 @@ class LoginScreen extends StatelessWidget {
       print('Connection failed: $e');
       _showDialog(context, '서버 연결 실패');
     }
+  }
+
+  Future<void> _saveSessionData(String username, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+    await prefs.setString('password', password);
   }
 
   Future<void> _checkSession(BuildContext context) async {
