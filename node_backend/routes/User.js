@@ -37,8 +37,8 @@ router.post("/register", async (req, res) => {
     console.log("Received register request:", req.body);
     let user = await User.findOne({ username });
     if (user) {
-      console.log("User already exists");
-      return res.status(400).json({ msg: "User already exists" });
+      console.log("Username already exists");
+      return res.status(400).json({ msg: "Username already exists" });
     }
     user = new User({ username, password, name });
     await user.save();
@@ -63,6 +63,15 @@ router.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
+    req.session.user = {
+      id:username,
+      pw:password,
+      authorized:true,
+    };
+    console.log("cookie입니다.")
+    console.log(req.session.cookie)
+    console.log("user입니다.")
+    console.log(req.session.user)
 
     res.json({ msg: "Login successful" });
   } catch (err) {
@@ -70,5 +79,32 @@ router.post("/login", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
+
+router.get("/logout", async (req, res) => {
+  console.log("로그아웃을 하면 다시 로그인 후 이용하여야합니다.");
+
+  if(req.session.user) {
+    console.log("로그아웃중입니다.")
+    req.session.destroy((err) => {
+      if(err) {
+        console.log("세션 삭제시에 에러가 발생하였습니다.");
+        return err;
+      }
+      console.log("세션이 삭제되었습니다.");
+
+    })
+  }
+  else {
+    console.log("비회원 이용중입니다.")
+  }
+})
+
+router.get("/session", async (req, res) => {
+  console.log("cookie입니다.")
+  console.log(req.session.cookie)
+  console.log("user입니다.")
+  console.log(req.session.user)
+  
+})
 
 module.exports = router;

@@ -1,6 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class AccountSettingsScreen extends StatelessWidget {
+class AccountSettingsScreen extends StatefulWidget {
+  @override
+  _AccountSettingsScreenState createState() => _AccountSettingsScreenState();
+}
+
+class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
+  String _username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('username') ?? 'Guest';
+    });
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    if (_username == 'Guest') {
+      _showWarningDialog(context);
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('로그아웃'),
+            content: Text('로그아웃 하시겠습니까?'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('취소'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: Text('확인'),
+                onPressed: () {
+                  _logout(context);
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // 모든 세션 값 삭제
+    Navigator.pop(context); // 로그아웃 후 뒤로가기
+  }
+
+  void _showWarningDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('경고'),
+          content: Text('비회원으로 이용중입니다. 로그아웃할 수 없습니다.'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('확인'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,7 +123,7 @@ class AccountSettingsScreen extends StatelessWidget {
               backgroundImage: AssetImage('assets/img4.jpeg'), // 프로필 이미지 경로
             ),
             title: Text('프로필'),
-            subtitle: Text('이다군이다은'),
+            subtitle: Text(_username),
             trailing: Icon(Icons.arrow_forward_ios),
             onTap: () {
               // 프로필 클릭 시 동작 추가
@@ -132,6 +209,17 @@ class AccountSettingsScreen extends StatelessWidget {
             onTap: () {
               // 프로필 인증 표시 클릭 시 동작 추가
             },
+          ),
+          Divider(),
+          // Logout Button
+          ListTile(
+            leading: Icon(Icons.logout, color: Colors.red),
+            title: Text(
+              '로그아웃',
+              style: TextStyle(color: Colors.red),
+            ),
+            trailing: Icon(Icons.arrow_forward_ios, color: Colors.red),
+            onTap: () => _confirmLogout(context),
           ),
         ],
       ),

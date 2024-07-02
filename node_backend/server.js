@@ -5,14 +5,31 @@ const cors = require("cors");
 const socketIo = require('socket.io');
 const axios = require('axios');
 require("dotenv").config();
-
+const cookieParser = require("cookie-parser");
+const expressSession = require("express-session");
+const MemoryStore = require("memorystore")(expressSession);
 const app = express();
 const server = require('http').createServer(app);
 const io = socketIo(server);
 
-app.use(cors());
+app.use(cors({
+  origin: "*", // 클라이언트 도메인
+  credentials: true // 세션 쿠키를 허용하기 위해 필요
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(cookieParser());
+
+app.use(
+  expressSession({
+    secret: "1234",
+    resave: true,
+    saveUninitialized: true,
+    cookie: { secure: false, httpOnly: true } 
+
+  })
+);
 
 // MongoDB 연결 설정
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/makking';

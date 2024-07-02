@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'broadcast_list_screen.dart'; // BroadcastListScreen을 임포트
 import 'register_screen.dart'; // 새로 만든 RegisterScreen을 임포트
 
@@ -27,10 +28,44 @@ class LoginScreen extends StatelessWidget {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('Login successful: ${data['msg']}');
+        await _saveSessionData(
+            _usernameController.text, _passwordController.text);
         _showWelcomeDialog(context, _usernameController.text);
       } else {
         print('Login failed: ${response.body}');
         _showDialog(context, '가입되지 않은 회원입니다.');
+      }
+    } catch (e) {
+      print('Connection failed: $e');
+      _showDialog(context, '서버 연결 실패');
+    }
+  }
+
+  Future<void> _saveSessionData(String username, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+    await prefs.setString('password', password);
+  }
+
+  Future<void> _checkSession(BuildContext context) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:5001/session'), // 서버 URL
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Session data: $data');
+        _showSessionData(context, data);
+      } else {
+        print('Failed to fetch session data: ${response.body}');
+        _showDialog(context, '세션 데이터를 가져오는 데 실패했습니다.');
       }
     } catch (e) {
       print('Connection failed: $e');
@@ -71,6 +106,26 @@ class LoginScreen extends StatelessWidget {
         return AlertDialog(
           title: Text('알림'),
           content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text('확인'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSessionData(BuildContext context, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Session Data'),
+          content: Text('User: ${data['username']}\nName: ${data['name']}'),
           actions: <Widget>[
             TextButton(
               child: Text('확인'),
@@ -147,6 +202,16 @@ class LoginScreen extends StatelessWidget {
                 textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               child: Text('LOGIN'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _checkSession(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
+                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              child: Text('CHECK SESSION'),
             ),
             SizedBox(height: 16),
             TextButton(
