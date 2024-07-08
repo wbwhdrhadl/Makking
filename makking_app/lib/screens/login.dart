@@ -12,7 +12,7 @@ class LoginScreen extends StatelessWidget {
   Future<void> _login(BuildContext context) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5001/login'), // 서버 URL
+        Uri.parse('http://43.203.251.58:5001/login'), // 서버 URL
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

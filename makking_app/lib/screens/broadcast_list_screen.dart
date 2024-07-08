@@ -184,7 +184,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   Future<void> fetchData() async {
     try {
       var response = await http.get(
-          Uri.parse('http://localhost:5001/messages/${widget.broadcastName}'));
+          Uri.parse('http://43.203.251.58:5001/messages/${widget.broadcastName}'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
@@ -202,7 +202,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   void incrementLikes() async {
     try {
       var response = await http.post(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}/like'));
+          'http://43.203.251.58:5001/messages/${widget.broadcastName}/like'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
@@ -219,7 +219,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   void incrementViewers() async {
     try {
       var response = await http.post(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}/viewers'));
+          'http://43.203.251.58:5001/messages/${widget.broadcastName}/viewers'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
