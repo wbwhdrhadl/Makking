@@ -32,7 +32,7 @@ app.use(
 );
 
 // MongoDB 연결 설정
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/makking';
+const mongoURI = process.env.MONGO_URI || 'mongodb://43.203.251.58:27017/makking';
 mongoose.connect(mongoURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -45,7 +45,7 @@ io.on('connection', (socket) => {
   console.log('새로운 클라이언트가 연결되었습니다!');
 
   socket.on('stream_image', (imageBase64) => {
-    axios.post('http://172.30.1.13:5003/process_image', {
+    axios.post('http://43.203.251.58:5003/process_image', {
       image: imageBase64
     })
     .then(response => {

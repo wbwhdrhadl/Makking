@@ -29,7 +29,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void initializeSocket() {
-    _socket = IO.io('http://172.30.1.13:5001', <String, dynamic>{
+    _socket = IO.io('http://43.203.251.58:5001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });

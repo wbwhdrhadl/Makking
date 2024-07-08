@@ -198,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('http://172.30.1.13:5001/naverlogin'), // Ensure this is your server's actual API address
+        Uri.parse('http://43.203.251.58:5001/naverlogin'), // Ensure this is your server's actual API address
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -239,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://172.30.1.13:5001/kakaologin');
+    final url = Uri.parse('http://43.203.251.58:5001/kakaologin');
 
     String? email = user.kakaoAccount?.email;
     String? name = user.kakaoAccount?.profile?.nickname;
