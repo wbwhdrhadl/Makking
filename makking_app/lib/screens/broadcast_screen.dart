@@ -19,6 +19,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   bool isStreaming = false;
   Timer? _timer;
   String serverMessage = '';
+  Image? processedImage; // 추가: 서버로부터 받은 이미지를 저장할 변수
 
   @override
   void initState() {
@@ -35,15 +36,16 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     _socket!.connect();
 
     _socket!.on('connect', (_) {
-      print('connect');
+      print('Connected');
       _socket!.on('receive_message', (data) {
         setState(() {
           serverMessage = data;
+          processedImage = Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
         });
       });
     });
 
-    _socket!.on('disconnect', (_) => print('disconnect'));
+    _socket!.on('disconnect', (_) => print('Disconnected'));
     _socket!.on('fromServer', (_) => print(_));
   }
 
@@ -80,7 +82,9 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       _socket!.emit('stream_image', base64Encode(data));
     }
     await Future.delayed(Duration(milliseconds: 500)); // Adjust the frame rate
-    isStreaming = false;
+    setState(() {
+      isStreaming = false;
+    });
   }
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
@@ -129,7 +133,9 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
           ),
         ],
       ),
-      body: CameraPreview(_cameraController!),
+      body: Center(
+        child: processedImage ?? CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
+      ),
     );
   }
 

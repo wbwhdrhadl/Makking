@@ -45,3 +45,6 @@ app.*.map.json
 package-lock.json
 node_modules/
 node_backend/.env
+
+makking_app/build
+python_backend/venv
