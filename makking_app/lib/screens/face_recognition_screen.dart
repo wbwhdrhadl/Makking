@@ -35,7 +35,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://43.203.251.58:5001/uploadFile');
+    final uri = Uri.parse('http://localhost:5001/uploadFile');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
         'attachment', // 필드 이름을 'attachment'로 변경
