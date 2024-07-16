@@ -109,7 +109,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _loginButton({required String imagePath, required double screenWidth, required double screenHeight, required Function() onPressed}) {
+  Widget _loginButton(
+      {required String imagePath,
+      required double screenWidth,
+      required double screenHeight,
+      required Function() onPressed}) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -139,10 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
       OAuthToken token = await UserApi.instance.loginWithKakaoTalk();
       print('카카오톡으로 로그인 성공');
       await _printUserInfo(token);
-      Navigator.push(context, MaterialPageRoute(builder: (context) => BroadcastListScreen()));
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => BroadcastListScreen()));
     } catch (error) {
       print('카카오톡으로 로그인 실패: $error');
-      _loginWithKakaoAccount(context);  // Fallback to Kakao account login if KakaoTalk login fails
+      _loginWithKakaoAccount(
+          context); // Fallback to Kakao account login if KakaoTalk login fails
     }
   }
 
@@ -162,14 +168,14 @@ class _HomeScreenState extends State<HomeScreen> {
       NaverAccessToken res = await FlutterNaverLogin.currentAccessToken;
 
       setState(() {
-        accessToken = res.accessToken;  // accessToken을 상태에 저장
-        tokenType = res.tokenType;      // tokenType을 상태에 저장
-        refreshToken = res.refreshToken;// refreshToken을 상태에 저장
+        accessToken = res.accessToken; // accessToken을 상태에 저장
+        tokenType = res.tokenType; // tokenType을 상태에 저장
+        refreshToken = res.refreshToken; // refreshToken을 상태에 저장
       });
 
-      String id = user.account.id;      // ID 정보 추출
-      String email = user.account.email;// 이메일 정보 추출
-      String name = user.account.name;  // 이름 정보 추출
+      String id = user.account.id; // ID 정보 추출
+      String email = user.account.email; // 이메일 정보 추출
+      String name = user.account.name; // 이름 정보 추출
       String tel = user.account.mobile
           .replaceAll('+82', '0')
           .replaceAll('-', '')
@@ -181,24 +187,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // 사용자 정보를 서버로 전송
       await _sendNaverUserInfoToServer(
-        id,
-        email,
-        name,
-        sex,
-        tel,
-        accessToken // 액세스 토큰을 문자열로 전달
-      );
+          id, email, name, sex, tel, accessToken // 액세스 토큰을 문자열로 전달
+          );
     } catch (error) {
       print('naver login error $error');
     }
   }
 
   Future<void> _sendNaverUserInfoToServer(
-    String userId, String email, String name, String gender, String phoneNumber, String accessToken
-  ) async {
+      String userId,
+      String email,
+      String name,
+      String gender,
+      String phoneNumber,
+      String accessToken) async {
     try {
       final response = await http.post(
-        Uri.parse('http://43.203.251.58:5001/naverlogin'), // Ensure this is your server's actual API address
+        Uri.parse(
+            'http://localhost:5001/naverlogin'), // Ensure this is your server's actual API address
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -222,7 +228,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
   Future<void> _printUserInfo(OAuthToken token) async {
     try {
       User user = await UserApi.instance.me();
@@ -239,12 +244,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://43.203.251.58:5001/kakaologin');
+    final url = Uri.parse('http://localhost:5001/kakaologin');
 
     String? email = user.kakaoAccount?.email;
     String? name = user.kakaoAccount?.profile?.nickname;
     String? phoneNumber = user.kakaoAccount?.phoneNumber;
-    String genderStr = user.kakaoAccount?.gender?.toString().split('.').last ?? "Not specified";
+    String genderStr = user.kakaoAccount?.gender?.toString().split('.').last ??
+        "Not specified";
 
     Map<String, dynamic> userData = {
       'userId': user.id.toString(),

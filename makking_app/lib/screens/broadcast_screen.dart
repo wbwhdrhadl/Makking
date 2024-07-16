@@ -29,7 +29,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void initializeSocket() {
-    _socket = IO.io('http://43.203.251.58:5001', <String, dynamic>{
+    _socket = IO.io('http://localhost:5001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -40,7 +40,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       _socket!.on('receive_message', (data) {
         setState(() {
           serverMessage = data;
-          processedImage = Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
+          processedImage =
+              Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
         });
       });
     });
@@ -52,7 +53,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
     if (_cameras.isNotEmpty) {
-      _cameraController = CameraController(_cameras.first, ResolutionPreset.high);
+      _cameraController =
+          CameraController(_cameras.first, ResolutionPreset.high);
       await _cameraController!.initialize();
       setState(() {});
     } else {
@@ -88,7 +90,10 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     try {
       final img = imglib.Image(image.width, image.height);
       for (int i = 0; i < image.width * image.height; i++) {
-        img.data[i] = 0xFF000000 | (image.planes[0].bytes[i] << 16) | (image.planes[0].bytes[i] << 8) | image.planes[0].bytes[i];
+        img.data[i] = 0xFF000000 |
+            (image.planes[0].bytes[i] << 16) |
+            (image.planes[0].bytes[i] << 8) |
+            image.planes[0].bytes[i];
       }
       return img;
     } catch (e) {
@@ -127,7 +132,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
           ),
         ],
       ),
-      body: processedImage ?? CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
+      body: processedImage ??
+          CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
     );
   }
 
@@ -137,7 +143,9 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       return;
     }
 
-    CameraLensDirection currentDirection = _cameraController?.description.lensDirection ?? CameraLensDirection.front;
+    CameraLensDirection currentDirection =
+        _cameraController?.description.lensDirection ??
+            CameraLensDirection.front;
     CameraDescription newCamera = _cameras.firstWhere(
       (camera) => camera.lensDirection != currentDirection,
       orElse: () => _cameras.first,

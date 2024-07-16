@@ -25,7 +25,7 @@ class _Broadcast1State extends State<Broadcast1> {
   Future<void> _fetchMessages() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://43.203.251.58:5001/messages/${widget.broadcastName}')); // API 엔드포인트 주소 확인
+          'http://localhost:5001/messages/${widget.broadcastName}')); // API 엔드포인트 주소 확인
       if (response.statusCode == 200) {
         List<dynamic> messages = json.decode(response.body); // 메시지 배열 파싱
         List<String> messageList = messages.map((msg) {
@@ -50,7 +50,7 @@ class _Broadcast1State extends State<Broadcast1> {
   Future<void> _sendMessage(String message) async {
     try {
       final response = await http.post(
-        Uri.parse('http://43.203.251.58:5001/messages/${widget.broadcastName}'),
+        Uri.parse('http://localhost:5001/messages/${widget.broadcastName}'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'message': message}),
       );
