@@ -81,7 +81,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       Uint8List data = Uint8List.fromList(png);
       _socket!.emit('stream_image', base64Encode(data));
     }
-    await Future.delayed(Duration(milliseconds: 500)); // Adjust the frame rate
+    await Future.delayed(Duration(milliseconds: 8)); // Adjust the frame rate
     setState(() {
       isStreaming = false;
     });
@@ -152,7 +152,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     );
 
     await _cameraController?.dispose();
-    _cameraController = CameraController(newCamera, ResolutionPreset.medium);
+    _cameraController = CameraController(newCamera, ResolutionPreset.high);
     await _cameraController!.initialize();
     if (isStreaming) {
       startStreaming();
