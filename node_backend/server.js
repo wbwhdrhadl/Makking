@@ -76,5 +76,5 @@ app.use("/", userRouter);
 
 
 // 포트 설정 및 서버 시작
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5009;
 server.listen(PORT, () => console.log(`서버가 포트 ${PORT}에서 시작되었습니다`));
