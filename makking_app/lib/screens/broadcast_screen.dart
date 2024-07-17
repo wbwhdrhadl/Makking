@@ -1,11 +1,8 @@
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as imglib;
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'dart:async';
+import 'package:camera/camera.dart';
+import 'package:flutter_socket_io/flutter_socket_io.dart';
+import 'package:flutter_socket_io/socket_io_manager.dart';
+import 'dart:convert';
 
 class BroadcastScreen extends StatefulWidget {
   @override
@@ -15,38 +12,16 @@ class BroadcastScreen extends StatefulWidget {
 class _BroadcastScreenState extends State<BroadcastScreen> {
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
-  IO.Socket? _socket;
+  MediaStream? _localStream;
+  final SocketIOManager _socketIOManager = SocketIOManager();
+  SocketIO? _socket;
   bool isStreaming = false;
-  Timer? _timer;
-  String serverMessage = '';
-  Image? processedImage; // 추가: 서버로부터 받은 이미지를 저장할 변수
 
   @override
   void initState() {
     super.initState();
     initializeCamera();
-    initializeSocket();
-  }
-
-  void initializeSocket() {
-    _socket = IO.io('http://172.30.1.13:5001', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
-    _socket!.connect();
-
-    _socket!.on('connect', (_) {
-      print('Connected');
-      _socket!.on('receive_message', (data) {
-        setState(() {
-          serverMessage = data;
-          processedImage = Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
-        });
-      });
-    });
-
-    _socket!.on('disconnect', (_) => print('Disconnected'));
-    _socket!.on('fromServer', (_) => print(_));
+    initSocket();
   }
 
   Future<void> initializeCamera() async {
@@ -60,59 +35,59 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     }
   }
 
-  void startStreaming() {
+  void initSocket() {
+    _socket = _socketIOManager.createSocketIO(
+      'http://172.30.1.13', // 서버 주소
+      '/',
+    );
+    _socket!.init();
+    _socket!.connect();
+  }
+
+  Future<void> startStreaming() async {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       print("Camera is not initialized.");
       return;
     }
+
+    final String rtmpUrl = 'rtmp://172.30.1.13/live/my_stream_key';
+    final String command = '-f lavfi -i anullsrc -f dshow -i video="${_cameraController!.description.name}" -vcodec libx264 -pix_fmt yuv420p -preset ultrafast -tune zerolatency -f flv $rtmpUrl';
+
+    // FFmpeg 실행
+    _flutterFFmpeg.execute(command).then((rc) {
+      print('FFmpeg process exited with rc $rc');
+    });
+
+    setState(() {
+      isStreaming = true;
+    });
+
+    // 예시: 이미지 스트리밍
     _cameraController!.startImageStream((CameraImage image) {
-      if (!isStreaming) {
-        isStreaming = true;
-        processImage(image);
-      }
+      // 이미지 데이터 처리 및 소켓 전송
+      List<int> imageData = image.planes[0].bytes;
+      String base64Image = base64Encode(imageData);
+
+      _socket!.emit('stream_image', [base64Image]); // 서버로 이미지 데이터 전송
     });
   }
 
-  Future<void> processImage(CameraImage image) async {
-    var img = await compute(convertYUV420toImage, image);
-    if (img != null) {
-      final resizedImg = imglib.copyResize(img, width: 640, height: 360);
-      List<int> png = imglib.encodePng(resizedImg);
-      Uint8List data = Uint8List.fromList(png);
-      _socket!.emit('stream_image', base64Encode(data));
-    }
-    await Future.delayed(Duration(milliseconds: 8)); // Adjust the frame rate
+  Future<void> stopStreaming() async {
+    _flutterFFmpeg.cancel();
     setState(() {
       isStreaming = false;
     });
+
+    _cameraController!.stopImageStream();
   }
 
-  static imglib.Image? convertYUV420toImage(CameraImage image) {
-    try {
-      final img = imglib.Image(image.width, image.height);
-      for (int i = 0; i < image.width * image.height; i++) {
-        img.data[i] = 0xFF000000 | (image.planes[0].bytes[i] << 16) | (image.planes[0].bytes[i] << 8) | image.planes[0].bytes[i];
-      }
-      return img;
-    } catch (e) {
-      print("Error converting YUV420 to image: $e");
-      return null;
-    }
-  }
-
-  void stopStreaming() {
-    _cameraController?.stopImageStream();
-    setState(() {
-      isStreaming = false;
-    });
-  }
-
-  void toggleStreaming() {
-    if (isStreaming) {
-      stopStreaming();
-    } else {
-      startStreaming();
-    }
+  @override
+  void dispose() {
+    _socket!.disconnect();
+    _socketIOManager.dispose();
+    _cameraController?.dispose();
+    _localStream?.dispose();
+    super.dispose();
   }
 
   @override
@@ -122,49 +97,19 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: toggleStreaming,
-          child: Text(isStreaming ? 'Stop Broadcasting' : 'Start Broadcasting'),
-        ),
-        actions: <Widget>[
+        title: Text(isStreaming ? 'Stop Broadcasting' : 'Start Broadcasting'),
+        actions: [
           IconButton(
-            icon: Icon(Icons.switch_camera),
-            onPressed: toggleCamera,
+            icon: Icon(isStreaming ? Icons.stop : Icons.videocam),
+            onPressed: isStreaming ? stopStreaming : startStreaming,
           ),
         ],
       ),
       body: Center(
-        child: processedImage ?? CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
+        child: _cameraController!.value.isInitialized
+            ? CameraPreview(_cameraController!)
+            : const Text('No camera available'),
       ),
     );
-  }
-
-  void toggleCamera() async {
-    if (_cameras.isEmpty) {
-      print("No cameras available");
-      return;
-    }
-
-    CameraLensDirection currentDirection = _cameraController?.description.lensDirection ?? CameraLensDirection.front;
-    CameraDescription newCamera = _cameras.firstWhere(
-      (camera) => camera.lensDirection != currentDirection,
-      orElse: () => _cameras.first,
-    );
-
-    await _cameraController?.dispose();
-    _cameraController = CameraController(newCamera, ResolutionPreset.high);
-    await _cameraController!.initialize();
-    if (isStreaming) {
-      startStreaming();
-    }
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _cameraController?.dispose();
-    _socket?.disconnect();
-    _timer?.cancel();
-    super.dispose();
   }
 }

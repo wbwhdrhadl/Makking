@@ -19,7 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.3.4 <4.0.0"
+  sdk: ">=2.12.0 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -37,10 +37,11 @@ dependencies:
   camera: ^0.9.4+5
   web_socket_channel: ^2.1.0
   image: ^3.0.1 # 이미지 처리를 위한 패키지
-  socket_io_client: ^2.0.0-beta.4 # 이 부분은 최신 버전으로 확인하세요
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
+  socket_io_client: ^2.0.0-beta.4
   cupertino_icons: ^1.0.6
+  flutter_webrtc: ^0.9.12
+  flutter_ffmpeg: ^0.4.0
+  flutter_socket_io: ^0.6.0-nullsafety.1
 
 dev_dependencies:
   flutter_test:
