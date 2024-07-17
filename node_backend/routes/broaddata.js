@@ -12,15 +12,15 @@ const MessageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', MessageSchema);
 
-// 모든 메시지 가져오기
+// 모든 메시지 가져오기 - 최신 8개만
 router.get('/messages/:broadcastName', async (req, res) => {
   const { broadcastName } = req.params;
   try {
-    const messages = await Message.findOne({ broadcastName });
+    const messages = await Message.findOne({ broadcastName }, { messages: { $slice: -16 } });
     if (!messages) {
       return res.status(404).send({ error: 'No messages found for this broadcast name' });
     }
-    res.send(messages);
+    res.send(messages.messages); // 이제 최신 8개 메시지만 반환
   } catch (error) {
     console.error(error);
     res.status(500).send(error.message);

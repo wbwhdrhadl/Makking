@@ -14,6 +14,7 @@ class Broadcast1 extends StatefulWidget {
 class _Broadcast1State extends State<Broadcast1> {
   final TextEditingController _controller = TextEditingController();
   final List<String> _messages = [];
+  final ScrollController _scrollController = ScrollController(); // 스크롤 컨트롤러 추가
 
   @override
   void initState() {
@@ -24,9 +25,9 @@ class _Broadcast1State extends State<Broadcast1> {
   Future<void> _fetchMessages() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}')); // 여기서 IP 주소를 변경
+          'http://localhost:5001/messages/${widget.broadcastName}')); // API 엔드포인트 주소 확인
       if (response.statusCode == 200) {
-        List<dynamic> messages = json.decode(response.body);
+        List<dynamic> messages = json.decode(response.body); // 메시지 배열 파싱
         List<String> messageList = messages.map((msg) {
           if (msg is Map<String, dynamic> && msg.containsKey('message')) {
             return msg['message'] as String;
@@ -35,6 +36,7 @@ class _Broadcast1State extends State<Broadcast1> {
           }
         }).toList();
         setState(() {
+          _messages.clear(); // 새 메시지로 리스트를 업데이트
           _messages.addAll(messageList);
         });
       } else {
@@ -48,14 +50,20 @@ class _Broadcast1State extends State<Broadcast1> {
   Future<void> _sendMessage(String message) async {
     try {
       final response = await http.post(
-        Uri.parse(
-            'http://localhost:5001/messages/${widget.broadcastName}'), // 여기서 IP 주소를 변경
+        Uri.parse('http://localhost:5001/messages/${widget.broadcastName}'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'message': message}),
       );
       if (response.statusCode == 200) {
-        setState(() {
-          _messages.add(message);
+        _fetchMessages().then((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              // 메시지 전송 후 스크롤을 최하단으로 이동
+              _scrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
         });
       } else {
         print('Failed to send message: ${response.statusCode}');
@@ -109,6 +117,7 @@ class _Broadcast1State extends State<Broadcast1> {
                       ),
                       Expanded(
                         child: ListView.builder(
+                          controller: _scrollController, // 스크롤 컨트롤러 사용
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
                           itemCount: _messages.length,
                           itemBuilder: (context, index) {

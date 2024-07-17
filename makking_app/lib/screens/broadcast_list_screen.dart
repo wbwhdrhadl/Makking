@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For JSON processing
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Placeholder Widgets - Make sure to implement or correct these based on your actual files
 import 'face_recognition_screen.dart';
@@ -8,6 +12,7 @@ import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
 import 'broad1.dart';
 import 'broad2.dart';
+import 'speech.dart'; // Add this import
 
 void main() {
   runApp(MyApp());
@@ -25,6 +30,8 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// (Remaining code unchanged)
 
 class BroadcastListScreen extends StatelessWidget {
   final List<LiveStreamTile> broadcastList = [
@@ -74,8 +81,7 @@ class BroadcastListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      BroadcastScreen(),
+                  builder: (context) => BroadcastScreen(),
                 ),
               );
             },
@@ -110,6 +116,16 @@ class BroadcastListScreen extends StatelessWidget {
                   child: broadcast,
                 ))
             .toList(),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SpeechScreen()),
+          );
+        },
+        child: Icon(Icons.mic),
+        tooltip: '화자 분석하기',
       ),
       bottomNavigationBar: BottomAppBar(
         child: Row(
@@ -147,6 +163,8 @@ class BroadcastListScreen extends StatelessWidget {
     );
   }
 }
+
+// (Remaining code unchanged)
 
 class LiveStreamTile extends StatefulWidget {
   final String profileImage;

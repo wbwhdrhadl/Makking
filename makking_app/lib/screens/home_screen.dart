@@ -6,11 +6,20 @@ import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'broadcast_list_screen.dart';
 import 'login.dart'; // login.dart 파일을 import 합니다.
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String accessToken = '';
+  String tokenType = '';
+  String refreshToken = '';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 배경색을 하얀색으로 설정
+      backgroundColor: Colors.white,
       body: LayoutBuilder(
         builder: (context, constraints) {
           double screenWidth = constraints.maxWidth;
@@ -29,54 +38,18 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.02),
-                ElevatedButton(
-                  onPressed: () {
-                    _loginWithKakaoTalk(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/kakao_login.jpeg'),
-                        fit: BoxFit.cover,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Container(
-                      width: screenWidth * 0.6,
-                      height: screenHeight * 0.08,
-                    ),
-                  ),
+                _loginButton(
+                  imagePath: 'assets/kakao_login.jpeg',
+                  screenWidth: screenWidth,
+                  screenHeight: screenHeight,
+                  onPressed: () => _loginWithKakaoTalk(context),
                 ),
                 SizedBox(height: screenHeight * 0.02),
-                ElevatedButton(
-                  onPressed: () {
-                    _loginWithNaver(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/naver_login.jpeg'),
-                        fit: BoxFit.cover,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Container(
-                      width: screenWidth * 0.6,
-                      height: screenHeight * 0.08,
-                    ),
-                  ),
+                _loginButton(
+                  imagePath: 'assets/naver_login.jpeg',
+                  screenWidth: screenWidth,
+                  screenHeight: screenHeight,
+                  onPressed: _loginWithNaver,
                 ),
                 SizedBox(height: screenHeight * 0.02),
                 ElevatedButton(
@@ -134,17 +107,48 @@ class HomeScreen extends StatelessWidget {
         },
       ),
     );
-  } // Widget build
+  }
+
+  Widget _loginButton(
+      {required String imagePath,
+      required double screenWidth,
+      required double screenHeight,
+      required Function() onPressed}) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Ink(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(imagePath),
+            fit: BoxFit.cover,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Container(
+          width: screenWidth * 0.6,
+          height: screenHeight * 0.08,
+        ),
+      ),
+    );
+  }
 
   Future<void> _loginWithKakaoTalk(BuildContext context) async {
     try {
       OAuthToken token = await UserApi.instance.loginWithKakaoTalk();
       print('카카오톡으로 로그인 성공');
       await _printUserInfo(token);
-      Navigator.push(context, MaterialPageRoute(builder: (context) => BroadcastListScreen()));
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => BroadcastListScreen()));
     } catch (error) {
       print('카카오톡으로 로그인 실패: $error');
-      _loginWithKakaoAccount(context);  // Fallback to Kakao account login if KakaoTalk login fails
+      _loginWithKakaoAccount(
+          context); // Fallback to Kakao account login if KakaoTalk login fails
     }
   }
 
@@ -158,30 +162,69 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  // Naver 로그인 함수
-  Future<void> _loginWithNaver(BuildContext context) async {
+  void _loginWithNaver() async {
     try {
-      final NaverLoginResult result = await FlutterNaverLogin.logIn();
-      if (result.status == NaverLoginStatus.loggedIn) {
-        // 로그인 성공 시 계정 정보 가져오기
-        var account = await FlutterNaverLogin.currentAccount();
-        // 계정 정보에서 필요한 데이터 추출
-        String email = account.email ?? "이메일 정보 없음";
-        String name = account.name ?? "이름 정보 없음";
-        String gender = account.gender ?? "성별 정보 없음";
-        String phoneNumber = account.mobile ?? "전화번호 정보 없음";
-        // 콘솔에 사용자 정보 출력
-        print('로그인 성공: $email');
-        print('이름: $name');
-        print('성별: $gender');
-        print('전화번호: $phoneNumber');
+      final NaverLoginResult user = await FlutterNaverLogin.logIn();
+      NaverAccessToken res = await FlutterNaverLogin.currentAccessToken;
+
+      setState(() {
+        accessToken = res.accessToken; // accessToken을 상태에 저장
+        tokenType = res.tokenType; // tokenType을 상태에 저장
+        refreshToken = res.refreshToken; // refreshToken을 상태에 저장
+      });
+
+      String id = user.account.id; // ID 정보 추출
+      String email = user.account.email; // 이메일 정보 추출
+      String name = user.account.name; // 이름 정보 추출
+      String tel = user.account.mobile
+          .replaceAll('+82', '0')
+          .replaceAll('-', '')
+          .replaceAll(' ', '')
+          .replaceAll('+', '');
+      String sex = user.account.gender; // 성별 정보 추출
+
+      print('$email, $name, $tel, $sex');
+
+      // 사용자 정보를 서버로 전송
+      await _sendNaverUserInfoToServer(
+          id, email, name, sex, tel, accessToken // 액세스 토큰을 문자열로 전달
+          );
+    } catch (error) {
+      print('naver login error $error');
+    }
+  }
+
+  Future<void> _sendNaverUserInfoToServer(
+      String userId,
+      String email,
+      String name,
+      String gender,
+      String phoneNumber,
+      String accessToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'http://localhost:5001/naverlogin'), // Ensure this is your server's actual API address
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({
+          'userId': userId,
+          'email': email,
+          'name': name,
+          'gender': gender,
+          'phoneNumber': phoneNumber,
+          'accessToken': accessToken,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('User info sent to server successfully.');
       } else {
-        // 로그인 실패 시
-        print('로그인 실패');
+        print('Failed to send user info to server: ${response.statusCode}');
       }
     } catch (e) {
-      // 에러 처리
-      print('로그인 중 에러 발생: $e');
+      print('Error sending user info to server: $e');
     }
   }
 
@@ -201,28 +244,24 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _sendUserInfoToServer(User user, String accessToken) async {
-    final url = Uri.parse('http://172.30.1.13:5001/kakaologin');
+    final url = Uri.parse('http://localhost:5001/kakaologin');
 
-    // Use the null-aware operator to avoid accessing properties on a null object.
     String? email = user.kakaoAccount?.email;
     String? name = user.kakaoAccount?.profile?.nickname;
     String? phoneNumber = user.kakaoAccount?.phoneNumber;
-
-    // Convert the Gender enum to a string safely, handling potential nulls.
-    String genderStr = user.kakaoAccount?.gender?.toString().split('.').last ?? "Not specified";
+    String genderStr = user.kakaoAccount?.gender?.toString().split('.').last ??
+        "Not specified";
 
     Map<String, dynamic> userData = {
-      'userId': user.id.toString(), // Convert ID to string
-      'email': email ?? "No email provided", // Provide a default value if null
+      'userId': user.id.toString(),
+      'email': email ?? "No email provided",
       'name': name ?? "No name provided",
       'gender': genderStr,
       'phoneNumber': phoneNumber ?? "No phone number provided",
       'accessToken': accessToken,
     };
 
-
     try {
-      print('서버로 전송 시작: ${jsonEncode(userData)}');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
