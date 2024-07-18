@@ -42,7 +42,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
   flutter_webrtc: ^0.9.12
-  flutter_ffmpeg: ^0.4.0
   video_player: ^2.2.0
   #flutter_socket_io: ^0.6.0
   shared_preferences: ^2.0.6

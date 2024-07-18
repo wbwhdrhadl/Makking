@@ -1,7 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:web_socket_channel/io.dart';

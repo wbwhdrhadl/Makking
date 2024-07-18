@@ -71,4 +71,5 @@ flutter {
 
 dependencies {
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+    implementation 'com.arthenica:mobile-ffmpeg-full:4.4.LTS'
 }
