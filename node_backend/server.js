@@ -17,18 +17,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 io.on('connection', (socket) => {
   console.log('A new client has connected!');
 
-  socket.on('stream_image', (imageBase64) => {
-    axios.post('http://172.30.1.13:5003/process_image', {
-      image: imageBase64
-    })
-    .then(response => {
-      console.log('Image processing successful');
+  socket.on('stream_image', async (imageBase64) => {
+    try {
+      const response = await axios.post('http://172.30.1.13:5003/process_image', { image: imageBase64 });
       socket.emit('receive_message', response.data.processed_image);
-    })
-    .catch(error => {
+    } catch (error) {
       console.error('Error processing image:', error);
       socket.emit('receive_message', 'Error processing image');
-    });
+    }
   });
 
   socket.on('disconnect', () => console.log('Client disconnected'));

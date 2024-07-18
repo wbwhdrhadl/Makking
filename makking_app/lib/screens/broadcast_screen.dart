@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
+import 'dart:ui' as ui;
 
 class BroadcastScreen extends StatefulWidget {
   @override
@@ -19,7 +20,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   bool isStreaming = false;
   Timer? _timer;
   String serverMessage = '';
-  Image? processedImage; // 추가: 서버로부터 받은 이미지를 저장할 변수
+  Image? processedImage;
 
   @override
   void initState() {
@@ -34,25 +35,19 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       'autoConnect': false,
     });
     _socket!.connect();
-
-    _socket!.on('connect', (_) {
-      print('Connected');
-      _socket!.on('receive_message', (data) {
-        setState(() {
-          serverMessage = data;
-          processedImage = Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
-        });
-      });
-    });
-
+    _socket!.on('connect', (_) => print('Connected'));
+    _socket!.on('receive_message', _handleImageData);
     _socket!.on('disconnect', (_) => print('Disconnected'));
-    _socket!.on('fromServer', (_) => print(_));
   }
 
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
     if (_cameras.isNotEmpty) {
-      _cameraController = CameraController(_cameras.first, ResolutionPreset.medium);
+      _cameraController = CameraController(
+        _cameras.first,
+        ResolutionPreset.medium, // Changed resolution to medium to potentially increase frame rate
+        enableAudio: false
+      );
       await _cameraController!.initialize();
       setState(() {});
     } else {
@@ -61,30 +56,23 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void startStreaming() {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+    if (_cameraController?.value.isInitialized ?? false) {
+      _cameraController!.startImageStream((CameraImage image) => processImage(image)).catchError((error) {
+        print("Error starting image stream: $error");
+      });
+      setState(() => isStreaming = true);
+    } else {
       print("Camera is not initialized.");
-      return;
     }
-    _cameraController!.startImageStream((CameraImage image) {
-      if (!isStreaming) {
-        isStreaming = true;
-        processImage(image);
-      }
-    });
   }
 
   Future<void> processImage(CameraImage image) async {
     var img = await compute(convertYUV420toImage, image);
     if (img != null) {
-      final resizedImg = imglib.copyResize(img, width: 640, height: 360);
-      List<int> png = imglib.encodePng(resizedImg);
-      Uint8List data = Uint8List.fromList(png);
-      _socket!.emit('stream_image', base64Encode(data));
+      final resizedImg = imglib.copyResize(img, width: 320, height: 240);
+      List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
+      if (isStreaming) _socket!.emit('stream_image', base64Encode(Uint8List.fromList(jpg)));
     }
-    await Future.delayed(Duration(milliseconds: 12)); // Adjust the frame rate
-    setState(() {
-      isStreaming = false;
-    });
   }
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
@@ -100,44 +88,36 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     }
   }
 
-  void stopStreaming() {
-    _cameraController?.stopImageStream();
+  void _handleImageData(dynamic data) {
+    Uint8List imageData = base64Decode(data);
     setState(() {
-      isStreaming = false;
+      serverMessage = data;
+      processedImage = Image.memory(imageData);
     });
   }
 
-  void toggleStreaming() {
+  void stopStreaming() {
     if (isStreaming) {
-      stopStreaming();
-    } else {
-      startStreaming();
+      _cameraController?.stopImageStream();
+      setState(() => isStreaming = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: toggleStreaming,
-          child: Text(isStreaming ? 'Stop Broadcasting' : 'Start Broadcasting'),
-        ),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(Icons.switch_camera),
-            onPressed: toggleCamera,
-          ),
+        title: Text('Broadcasting'),
+        actions: [
+          IconButton(icon: Icon(isStreaming ? Icons.stop : Icons.videocam), onPressed: toggleStreaming),
+          IconButton(icon: Icon(Icons.switch_camera), onPressed: toggleCamera),
         ],
       ),
-      body: Center(
-        child: processedImage ?? CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
-      ),
+      body: Center(child: processedImage ?? CameraPreview(_cameraController!)),
     );
   }
+
+  void toggleStreaming() => isStreaming ? stopStreaming() : startStreaming();
 
   void toggleCamera() async {
     if (_cameras.isEmpty) {
@@ -145,18 +125,15 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       return;
     }
 
-    CameraLensDirection currentDirection = _cameraController?.description.lensDirection ?? CameraLensDirection.front;
     CameraDescription newCamera = _cameras.firstWhere(
-      (camera) => camera.lensDirection != currentDirection,
+      (camera) => camera.lensDirection != _cameraController?.description.lensDirection,
       orElse: () => _cameras.first,
     );
 
     await _cameraController?.dispose();
-    _cameraController = CameraController(newCamera, ResolutionPreset.high);
+    _cameraController = CameraController(newCamera, ResolutionPreset.medium); // Adjusted here as well
     await _cameraController!.initialize();
-    if (isStreaming) {
-      startStreaming();
-    }
+    if (isStreaming) startStreaming();
     setState(() {});
   }
 
