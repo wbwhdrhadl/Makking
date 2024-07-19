@@ -1,12 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'dart:async';
-import 'dart:ui' as ui;
+import 'package:video_player/video_player.dart';
+import 'package:flutter/foundation.dart';
 
 class BroadcastScreen extends StatefulWidget {
   @override
@@ -14,19 +14,38 @@ class BroadcastScreen extends StatefulWidget {
 }
 
 class _BroadcastScreenState extends State<BroadcastScreen> {
-  CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
+  CameraController? _cameraController;
+  VideoPlayerController? _videoPlayerController;
   IO.Socket? _socket;
   bool isStreaming = false;
-  Timer? _timer;
-  String serverMessage = '';
-  Image? processedImage;
 
   @override
   void initState() {
     super.initState();
     initializeCamera();
+    initializeVideoPlayer();
     initializeSocket();
+  }
+
+  Future<void> initializeCamera() async {
+    _cameras = await availableCameras();
+    if (_cameras.isNotEmpty) {
+      _cameraController = CameraController(_cameras.first, ResolutionPreset.medium);
+      await _cameraController!.initialize();
+      setState(() {});
+    } else {
+      print("No cameras available");
+    }
+  }
+
+  void initializeVideoPlayer() {
+    String hlsUrl = "http://172.30.1.13:5001/stream/output.m3u8";
+    _videoPlayerController = VideoPlayerController.network(hlsUrl)
+      ..initialize().then((_) {
+        setState(() {});
+        _videoPlayerController!.play();
+      });
   }
 
   void initializeSocket() {
@@ -35,34 +54,14 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       'autoConnect': false,
     });
     _socket!.connect();
-    _socket!.on('connect', (_) => print('Connected'));
-    _socket!.on('receive_message', _handleImageData);
-    _socket!.on('disconnect', (_) => print('Disconnected'));
-  }
-
-  Future<void> initializeCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras.isNotEmpty) {
-      _cameraController = CameraController(
-        _cameras.first,
-        ResolutionPreset.medium, // Changed resolution to medium to potentially increase frame rate
-        enableAudio: false
-      );
-      await _cameraController!.initialize();
-      setState(() {});
-    } else {
-      print("No cameras available");
-    }
   }
 
   void startStreaming() {
     if (_cameraController?.value.isInitialized ?? false) {
-      _cameraController!.startImageStream((CameraImage image) => processImage(image)).catchError((error) {
-        print("Error starting image stream: $error");
+      _cameraController!.startImageStream((CameraImage image) {
+        processImage(image);
       });
       setState(() => isStreaming = true);
-    } else {
-      print("Camera is not initialized.");
     }
   }
 
@@ -71,35 +70,45 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     if (img != null) {
       final resizedImg = imglib.copyResize(img, width: 320, height: 240);
       List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
-      if (isStreaming) _socket!.emit('stream_image', base64Encode(Uint8List.fromList(jpg)));
+      _socket!.emit('stream_image', base64Encode(Uint8List.fromList(jpg)));
     }
   }
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
     try {
-      final img = imglib.Image(image.width, image.height);
-      for (int i = 0; i < image.width * image.height; i++) {
-        img.data[i] = 0xFF000000 | (image.planes[0].bytes[i] << 16) | (image.planes[0].bytes[i] << 8) | image.planes[0].bytes[i];
+      final int width = image.width;
+      final int height = image.height;
+      final imglib.Image img = imglib.Image(width, height);
+
+      final int uvRowStride = image.planes[1].bytesPerRow;
+      final int uvPixelStride = image.planes[1].bytesPerPixel!;
+      for (int y = 0; y < height; y++) {
+        final int uvY = y >> 1;
+        for (int x = 0; x < width; x++) {
+          final int uvX = x >> 1;
+          final int uvIndex = uvY * uvRowStride + uvX * uvPixelStride;
+          final int index = y * width + x;
+
+          final int yp = image.planes[0].bytes[index];
+          final int up = image.planes[1].bytes[uvIndex];
+          final int vp = image.planes[2].bytes[uvIndex];
+
+          int r = (yp + (1.370705 * (vp - 128))).toInt();
+          int g = (yp - (0.337633 * (up - 128)) - (0.698001 * (vp - 128))).toInt();
+          int b = (yp + (1.732446 * (up - 128))).toInt();
+
+          // Clipping RGB values to be within the 0-255 range
+          r = r.clamp(0, 255);
+          g = g.clamp(0, 255);
+          b = b.clamp(0, 255);
+
+          img.data[index] = (0xFF << 24) | (r << 16) | (g << 8) | b;
+        }
       }
       return img;
     } catch (e) {
       print("Error converting YUV420 to image: $e");
       return null;
-    }
-  }
-
-  void _handleImageData(dynamic data) {
-    Uint8List imageData = base64Decode(data);
-    setState(() {
-      serverMessage = data;
-      processedImage = Image.memory(imageData);
-    });
-  }
-
-  void stopStreaming() {
-    if (isStreaming) {
-      _cameraController?.stopImageStream();
-      setState(() => isStreaming = false);
     }
   }
 
@@ -113,17 +122,28 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
           IconButton(icon: Icon(Icons.switch_camera), onPressed: toggleCamera),
         ],
       ),
-      body: Center(child: processedImage ?? CameraPreview(_cameraController!)),
+      body: Center(
+        child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
+          ? AspectRatio(
+              aspectRatio: _videoPlayerController!.value.aspectRatio,
+              child: VideoPlayer(_videoPlayerController!),
+            )
+          : CameraPreview(_cameraController!),
+      ),
     );
   }
 
-  void toggleStreaming() => isStreaming ? stopStreaming() : startStreaming();
+  void toggleStreaming() {
+    if (isStreaming) {
+      _cameraController?.stopImageStream();
+      setState(() => isStreaming = false);
+    } else {
+      startStreaming();
+    }
+  }
 
   void toggleCamera() async {
-    if (_cameras.isEmpty) {
-      print("No cameras available");
-      return;
-    }
+    if (_cameras.isEmpty) return;
 
     CameraDescription newCamera = _cameras.firstWhere(
       (camera) => camera.lensDirection != _cameraController?.description.lensDirection,
@@ -131,7 +151,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     );
 
     await _cameraController?.dispose();
-    _cameraController = CameraController(newCamera, ResolutionPreset.medium); // Adjusted here as well
+    _cameraController = CameraController(newCamera, ResolutionPreset.medium);
     await _cameraController!.initialize();
     if (isStreaming) startStreaming();
     setState(() {});
@@ -140,8 +160,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   @override
   void dispose() {
     _cameraController?.dispose();
+    _videoPlayerController?.dispose();
     _socket?.disconnect();
-    _timer?.cancel();
     super.dispose();
   }
 }
