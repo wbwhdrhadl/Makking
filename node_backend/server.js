@@ -13,22 +13,20 @@ const io = socketIo(server);
 app.use(cors());
 app.use(express.json());
 
-// 정적 파일 서빙 경로 설정 (예: /stream)
 const streamDir = path.join(__dirname, "stream");
 app.use("/stream", express.static(streamDir));
 
 let ffmpeg;
+let recording = false;
 
 function startFFmpeg() {
-  if (ffmpeg) {
-    ffmpeg.kill();
-  }
-
+  const outputFilePath = path.join(streamDir, "output.m3u8");
   ffmpeg = spawn("ffmpeg", [
+    "-color_range", "jpeg",
     "-f", "image2pipe",
     "-pix_fmt", "yuv420p",
     "-s", "640x480",
-    "-r", "30",
+    "-r", "10",
     "-i", "-",
     "-c:v", "libx264",
     "-preset", "veryfast",
@@ -38,11 +36,11 @@ function startFFmpeg() {
     "-bufsize", "2000k",
     "-pix_fmt", "yuv420p",
     "-g", "30",
-    "-hls_time", "4",
-    "-hls_list_size", "4",
-    "-hls_flags", "delete_segments",
+    "-hls_time", "1",           // Set segment duration to 1 second
+    "-hls_list_size", "5",      // Keep only the last 5 segments in the playlist
+    "-hls_flags", "delete_segments", // Automatically delete old segments
     "-f", "hls",
-    path.join(streamDir, "output.m3u8")
+    outputFilePath
   ]);
 
   ffmpeg.stderr.on("data", (data) => {
@@ -52,26 +50,45 @@ function startFFmpeg() {
   ffmpeg.on("close", (code) => {
     console.log(`FFmpeg process exited with code ${code}`);
   });
+
+  recording = true;
+  console.log(`Recording started: ${outputFilePath}`);
 }
 
-startFFmpeg();
+function stopFFmpeg() {
+  if (ffmpeg) {
+    ffmpeg.stdin.end();
+    ffmpeg = null;
+    recording = false;
+    console.log("Recording stopped");
+  }
+}
 
 io.on("connection", (socket) => {
   console.log("A new client has connected!");
 
+  socket.on("start_recording", () => {
+    if (!recording) {
+      startFFmpeg();
+    }
+  });
+
+  socket.on("stop_recording", () => {
+    if (recording) {
+      stopFFmpeg();
+    }
+  });
+
   socket.on("stream_image", async (imageBase64) => {
     try {
       const response = await axios.post("http://localhost:5003/process_image", { image: imageBase64 });
-      console.log("Image processing successful");
       const processedImageBase64 = response.data.processed_image;
 
       const buffer = Buffer.from(processedImageBase64, "base64");
-      if (ffmpeg.stdin.writable) {
+      if (ffmpeg && ffmpeg.stdin.writable) {
         ffmpeg.stdin.write(buffer);
       } else {
-        console.error("FFmpeg stdin is not writable, restarting FFmpeg process");
-        startFFmpeg();
-        ffmpeg.stdin.write(buffer);
+        console.error("FFmpeg stdin is not writable");
       }
 
       socket.emit("receive_message", processedImageBase64);

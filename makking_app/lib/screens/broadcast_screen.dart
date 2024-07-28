@@ -1,3 +1,7 @@
+
+
+
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -18,7 +22,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   CameraController? _cameraController;
   VideoPlayerController? _videoPlayerController;
   IO.Socket? _socket;
-  bool isProcessingImage = false;
+  bool isRecording = false;
+  bool isStreaming = false;
 
   @override
   void initState() {
@@ -59,8 +64,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   void startStreaming() {
     if (_cameraController?.value.isInitialized ?? false) {
       _cameraController!.startImageStream((CameraImage image) {
-        if (!isProcessingImage) {
-          setState(() => isProcessingImage = true);
+        if (!isStreaming) {
+          setState(() => isStreaming = true);
           processImage(image);
         }
       });
@@ -74,7 +79,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
       _socket!.emit('stream_image', base64Encode(Uint8List.fromList(jpg)));
     }
-    setState(() => isProcessingImage = false);
+    setState(() => isStreaming = false); // 스트리밍 완료 후 isStreaming 상태를 false로 설정
   }
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
@@ -110,39 +115,24 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       }
       return img;
     } catch (e) {
-      print("Error converting YUV420 to image: $e");
+      print("Error converting YUV420toImage: $e");
       return null;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Broadcasting'),
-        actions: [
-          IconButton(icon: Icon(Icons.videocam), onPressed: startStreaming),
-          IconButton(icon: Icon(Icons.switch_camera), onPressed: toggleCamera),
-        ],
-      ),
-      body: Center(
-        child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
-          ? AspectRatio(
-              aspectRatio: _videoPlayerController!.value.aspectRatio,
-              child: VideoPlayer(_videoPlayerController!),
-            )
-          : (_cameraController != null && _cameraController!.value.isInitialized
-              ? CameraPreview(_cameraController!)
-              : CircularProgressIndicator()),
-      ),
-    );
-  }
-
   void toggleStreaming() {
-    if (isProcessingImage) {
+    if (isRecording) {
+      _socket!.emit('stop_recording');
+      setState(() {
+        isRecording = false;
+        isStreaming = false;
+      });
       _cameraController?.stopImageStream();
-      setState(() => isProcessingImage = false);
     } else {
+      _socket!.emit('start_recording');
+      setState(() {
+        isRecording = true;
+      });
       startStreaming();
     }
   }
@@ -158,8 +148,34 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     await _cameraController?.dispose();
     _cameraController = CameraController(newCamera, ResolutionPreset.medium);
     await _cameraController!.initialize();
-    if (isProcessingImage) startStreaming();
+    if (isRecording) startStreaming();
     setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Broadcasting'),
+        actions: [
+          IconButton(
+            icon: Icon(isRecording ? Icons.stop : Icons.videocam),
+            onPressed: toggleStreaming,
+          ),
+          IconButton(icon: Icon(Icons.switch_camera), onPressed: toggleCamera),
+        ],
+      ),
+      body: Center(
+        child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _videoPlayerController!.value.aspectRatio,
+                child: VideoPlayer(_videoPlayerController!),
+              )
+            : (_cameraController != null && _cameraController!.value.isInitialized
+                ? CameraPreview(_cameraController!)
+                : CircularProgressIndicator()),
+      ),
+    );
   }
 
   @override
