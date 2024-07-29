@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: screenWidth * 0.5,
                   height: screenHeight * 0.4,
                   child: Image.asset(
-                    'assets/logo.jpeg',
+                    'assets/NEEWWW_LOGO.jpeg',
                     fit: BoxFit.contain,
                   ),
                 ),

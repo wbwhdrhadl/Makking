@@ -22,23 +22,24 @@ let recording = false;
 function startFFmpeg() {
   const outputFilePath = path.join(streamDir, "output.m3u8");
   ffmpeg = spawn("ffmpeg", [
-    "-color_range", "jpeg",
     "-f", "image2pipe",
+    "-vcodec", "mjpeg",
     "-pix_fmt", "yuv420p",
     "-s", "640x480",
-    "-r", "10",
+    "-r", "30",
     "-i", "-",
     "-c:v", "libx264",
-    "-preset", "veryfast",
+    "-preset", "faster",
     "-tune", "zerolatency",
     "-profile:v", "baseline",
     "-level", "3.1",
-    "-bufsize", "2000k",
+    "-maxrate", "3000k", // 최대 비트레이트 설정
+    "-bufsize", "6000k", // 버퍼 크기 조정
     "-pix_fmt", "yuv420p",
     "-g", "30",
-    "-hls_time", "1",           // Set segment duration to 1 second
-    "-hls_list_size", "5",      // Keep only the last 5 segments in the playlist
-    "-hls_flags", "delete_segments", // Automatically delete old segments
+    "-hls_time", "2", // 세그먼트 길이를 2초로 설정
+    "-hls_list_size", "20", // 재생 목록에 유지되는 세그먼트 수
+    "-hls_flags", "delete_segments", // 오래된 세그먼트 자동 삭제
     "-f", "hls",
     outputFilePath
   ]);
