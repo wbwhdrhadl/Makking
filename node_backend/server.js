@@ -18,27 +18,29 @@ app.use("/stream", express.static(streamDir));
 
 let ffmpeg;
 let recording = false;
+let imageQueue = []; // 이미지를 저장할 큐
 
 function startFFmpeg() {
   const outputFilePath = path.join(streamDir, "output.m3u8");
   ffmpeg = spawn("ffmpeg", [
-    "-color_range", "jpeg",
     "-f", "image2pipe",
+    "-vcodec", "mjpeg",
     "-pix_fmt", "yuv420p",
-    "-s", "640x480",
-    "-r", "10",
+    "-s", "320x240",
+    "-r", "4",
     "-i", "-",
     "-c:v", "libx264",
-    "-preset", "veryfast",
+    "-preset", "ultrafast",
     "-tune", "zerolatency",
     "-profile:v", "baseline",
     "-level", "3.1",
-    "-bufsize", "2000k",
+    "-maxrate", "3000k",
+    "-bufsize", "6000k",
     "-pix_fmt", "yuv420p",
     "-g", "30",
-    "-hls_time", "1",           // Set segment duration to 1 second
-    "-hls_list_size", "5",      // Keep only the last 5 segments in the playlist
-    "-hls_flags", "delete_segments", // Automatically delete old segments
+    "-hls_time", "2",
+    "-hls_list_size", "20",
+    "-hls_flags", "delete_segments",
     "-f", "hls",
     outputFilePath
   ]);
@@ -53,6 +55,16 @@ function startFFmpeg() {
 
   recording = true;
   console.log(`Recording started: ${outputFilePath}`);
+
+  // 이미지 전송 타이머 설정
+  setInterval(() => {
+    if (imageQueue.length > 0) {
+      const image = imageQueue.shift();
+      if (ffmpeg && ffmpeg.stdin.writable) {
+        ffmpeg.stdin.write(image);
+      }
+    }
+  }, 300); // 0.2초 간격으로 이미지 전송
 }
 
 function stopFFmpeg() {
@@ -83,18 +95,10 @@ io.on("connection", (socket) => {
     try {
       const response = await axios.post("http://localhost:5003/process_image", { image: imageBase64 });
       const processedImageBase64 = response.data.processed_image;
-
       const buffer = Buffer.from(processedImageBase64, "base64");
-      if (ffmpeg && ffmpeg.stdin.writable) {
-        ffmpeg.stdin.write(buffer);
-      } else {
-        console.error("FFmpeg stdin is not writable");
-      }
-
-      socket.emit("receive_message", processedImageBase64);
+      imageQueue.push(buffer); // 처리된 이미지를 큐에 추가
     } catch (error) {
       console.error("Error processing image:", error);
-      socket.emit("receive_message", `Error processing image: ${error.message}`);
     }
   });
 
