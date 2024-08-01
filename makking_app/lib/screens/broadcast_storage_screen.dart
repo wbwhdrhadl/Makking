@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; // For JSON processing
-import 'dart:io';
-import 'package:file_picker/file_picker.dart';
-import 'package:makking_app/screens/broadcast_start_screen.dart';
-import 'package:path/path.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-
-// Placeholder Widgets - Make sure to implement or correct these based on your actual files
+import 'dart:convert';
 import 'face_recognition_screen.dart';
 import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
@@ -16,26 +9,7 @@ import 'broad2.dart';
 import 'speech.dart'; // Add this import
 import 'broadcast_storage_screen.dart';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Broadcasting Platform',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: BroadcastListScreen(),
-    );
-  }
-}
-
-// (Remaining code unchanged)
-
-class BroadcastListScreen extends StatelessWidget {
+class BroadcastStorageScreen extends StatelessWidget {
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
       profileImage: 'assets/img3.jpeg',
@@ -75,14 +49,28 @@ class BroadcastListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('방송 리스트 화면'),
+        title: Text('지난 방송 다시보기'),
         actions: [
           IconButton(
             icon: Icon(Icons.video_library),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => BroadcastStartScreen()),
+                MaterialPageRoute(
+                  builder: (context) => BroadcastScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.face_2),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      FaceRecognitionScreen(title: '얼굴 인식 화면'),
+                ),
               );
             },
           ),

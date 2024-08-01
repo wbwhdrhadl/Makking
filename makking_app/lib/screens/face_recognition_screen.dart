@@ -116,7 +116,16 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                     ),
                     SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: isLoading ? null : uploadImage,
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              await uploadImage();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => BroadcastScreen()),
+                              );
+                            },
                       child:
                           isLoading ? CircularProgressIndicator() : Text('다음'),
                     ),
