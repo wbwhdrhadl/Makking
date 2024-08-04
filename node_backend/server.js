@@ -53,7 +53,7 @@ function startFFmpeg() {
     "-s",
     "320x240",
     "-r",
-    "4",
+    "5",
     "-i",
     "-",
     "-c:v",
@@ -150,8 +150,7 @@ io.on("connection", (socket) => {
 });
 
 // MongoDB 연결 설정
-const mongoURI =
-  process.env.MONGO_URI || "mongodb://43.203.251.58:27017/makking";
+const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/makking";
 mongoose
   .connect(mongoURI, {
     useNewUrlParser: true,
