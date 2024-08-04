@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data'; // Uint8List를 사용하기 위해 추가
-import 'package:image_picker/image_picker.dart'; // Import Image Picker
-import 'package:http/http.dart' as http; // Import http package
-import 'broadcast_screen.dart'; // BroadcastScreen 임포트
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'broadcast_screen.dart';
 
 class FaceRecognitionScreen extends StatefulWidget {
   final String title;
@@ -35,25 +36,24 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://localhost:5001/uploadFile');
+    final uri = Uri.parse('http://localhost:5001/uploadFile'); // Express 서버 주소
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
-        'attachment', // 필드 이름을 'attachment'로 변경
+        'attachment',
         imageBytes!,
         filename: 'upload.png',
       ));
 
     try {
       final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final responseJson = json.decode(responseBody);
+
       if (response.statusCode == 200) {
-        // Successfully uploaded
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => BroadcastScreen()),
-        );
+        final imageUrl = responseJson['url'];
+        await processImage(imageUrl);
       } else {
-        // Handle the error
-        showErrorDialog('이미지 업로드 실패: ${response.statusCode}');
+        showErrorDialog('이미지 업로드 실패: ${responseJson['message']}');
       }
     } catch (e) {
       showErrorDialog('이미지 업로드 중 오류 발생: $e');
@@ -61,6 +61,29 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> processImage(String imageUrl) async {
+    final uri =
+        Uri.parse('http://localhost:8000/processImage'); // FastAPI 서버 주소
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'image_url': imageUrl}),
+    );
+
+    if (response.statusCode == 200) {
+      final responseJson = json.decode(response.body);
+      final processedImage = base64Decode(responseJson['image']);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BroadcastScreen(imageBytes: processedImage),
+        ),
+      );
+    } else {
+      showErrorDialog('이미지 처리 실패: ${response.body}');
     }
   }
 
@@ -116,16 +139,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                     ),
                     SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              await uploadImage();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => BroadcastScreen()),
-                              );
-                            },
+                      onPressed: isLoading ? null : uploadImage,
                       child:
                           isLoading ? CircularProgressIndicator() : Text('다음'),
                     ),

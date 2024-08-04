@@ -44,7 +44,11 @@ dependencies:
   shared_preferences: ^2.0.6
   file_picker: ^5.0.0
   path: ^1.8.0
-
+  flutter_webrtc: ^0.9.12
+  flutter_ffmpeg: ^0.4.0
+  video_player: ^2.2.0
+  flutter_sound: any
+  permission_handler: any
 
 dev_dependencies:
   flutter_test:

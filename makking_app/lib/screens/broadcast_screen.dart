@@ -8,6 +8,10 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
 
 class BroadcastScreen extends StatefulWidget {
+  final Uint8List? imageBytes;
+
+  BroadcastScreen({this.imageBytes});
+
   @override
   _BroadcastScreenState createState() => _BroadcastScreenState();
 }
@@ -19,7 +23,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   bool isStreaming = false;
   Timer? _timer;
   String serverMessage = '';
-  Image? processedImage; // 추가: 서버로부터 받은 이미지를 저장할 변수
+  Image? processedImage; // 서버로부터 받은 이미지를 저장할 변수
 
   @override
   void initState() {
@@ -37,12 +41,13 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
 
     _socket!.on('connect', (_) {
       print('Connected');
-      _socket!.on('receive_message', (data) {
-        setState(() {
-          serverMessage = data;
-          processedImage =
-              Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
-        });
+    });
+
+    _socket!.on('receive_message', (data) {
+      setState(() {
+        serverMessage = data;
+        processedImage =
+            Image.memory(base64Decode(data)); // 서버로부터 받은 이미지를 디코드하여 저장
       });
     });
 
@@ -132,8 +137,16 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
           ),
         ],
       ),
-      body: processedImage ??
-          CameraPreview(_cameraController!), // 처리된 이미지 또는 카메라 미리보기를 표시
+      body: processedImage != null
+          ? processedImage!
+          : widget.imageBytes != null
+              ? Image.memory(widget.imageBytes!)
+              : _cameraController != null &&
+                      _cameraController!.value.isInitialized
+                  ? CameraPreview(_cameraController!)
+                  : Center(
+                      child: Text('Initializing camera...'),
+                    ), // 처리된 이미지 또는 카메라 미리보기를 표시
     );
   }
 
