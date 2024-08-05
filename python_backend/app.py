@@ -22,6 +22,7 @@ app.add_middleware(
     allow_methods=["*"],  # 모든 HTTP 메서드 허용
     allow_headers=["*"],  # 모든 HTTP 헤더 허용
 )
+
 # Initialize models
 model = whisper.load_model("medium", device="cpu")
 embedding_model = PretrainedSpeakerEmbedding("speechbrain/spkrec-ecapa-voxceleb", device=torch.device("cpu"))
@@ -44,11 +45,11 @@ async def transcribe(file: UploadFile = File(...), num_speakers: int = 2):
     with open(file_location, "wb+") as f:
         f.write(file.file.read())
 
-
-    # Convert to .wav if necessary
-    if file_location[-3:] != 'wav':
+    # Check if the file is in MP4 format and convert to WAV
+    if file_location[-3:] == 'mp4':
         subprocess.call(['ffmpeg', '-i', file_location, 'temp_audio.wav', '-y'])
         file_location = 'temp_audio.wav'
+
     subprocess.call(['ffmpeg', '-i', file_location, '-ac', '1', 'audio_mono.wav', '-y'])
     path = 'audio_mono.wav'
 
@@ -74,13 +75,20 @@ async def transcribe(file: UploadFile = File(...), num_speakers: int = 2):
     for i, segment in enumerate(segments):
         segment['speaker'] = labels[i] + 1
 
-    transcript = ""
+    transcript = []
     for i, segment in enumerate(segments):
         if i == 0 or segments[i - 1]["speaker"] != segment["speaker"]:
-            transcript += f"\nSPEAKER {segment['speaker']} {time(segment['start'])}\n"
-        transcript += segment["text"][1:] + ' '
+            speaker_info = f"SPEAKER {segment['speaker']} {time(segment['start'])}"
+        else:
+            speaker_info = None
+        transcript.append({
+            "start": segment["start"],
+            "end": segment["end"],
+            "speaker": speaker_info,
+            "text": segment["text"][1:]
+        })
     print(transcript)
-    return {"transcript": transcript.strip()}
+    return {"transcript": transcript}
 
 if __name__ == "__main__":
     import uvicorn

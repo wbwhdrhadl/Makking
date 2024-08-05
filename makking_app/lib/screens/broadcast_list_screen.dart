@@ -12,7 +12,6 @@ import 'face_recognition_screen.dart';
 import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
 import 'broad1.dart';
-import 'speech.dart'; // Add this import
 import 'broadcast_storage_screen.dart';
 
 void main() {
@@ -103,16 +102,6 @@ class BroadcastListScreen extends StatelessWidget {
                   child: broadcast,
                 ))
             .toList(),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => SpeechScreen()),
-          );
-        },
-        child: Icon(Icons.mic),
-        tooltip: '화자 분석하기',
       ),
       bottomNavigationBar: BottomAppBar(
         child: Row(

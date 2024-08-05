@@ -6,41 +6,24 @@ import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
 import 'broad1.dart';
 import 'broad_reshow.dart'; // 추가된 부분
-import 'speech.dart';
+
 import 'broadcast_storage_screen.dart';
 
 class BroadcastStorageScreen extends StatelessWidget {
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
-      profileImage: 'assets/img3.jpeg',
-      streamerName: '와꾸대장봉준',
-      description: '봉준 60만개빵 무창클럽 vs 연합팀 [4경기 점니 3 vs 0 햇살] 스타',
+      profileImage: 'assets/daeun.jpeg',
+      streamerName: '다은이와 아윤이의 지난방송',
+      description: '아윤이가 연애를 한다 ?',
       viewers: 56880,
-      thumbnail: 'assets/img2.jpeg',
-      broadcastName: '와꾸대장봉준',
+      thumbnail: 'assets/ayuni.jpeg',
+      broadcastName: '아융이와다은이',
       onTap: (BuildContext context) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) =>
-                BroadReshow(broadcastName: '와꾸대장봉준'), // 변경된 부분
-          ),
-        );
-      },
-    ),
-    LiveStreamTile(
-      profileImage: 'assets/img4.jpeg',
-      streamerName: '이다군이다은',
-      description: '대학교 등교길 같이 탐험 ㄱㄱ',
-      viewers: 233,
-      thumbnail: 'assets/img1.jpeg',
-      broadcastName: '이다군이다은',
-      onTap: (BuildContext context) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                BroadReshow(broadcastName: '이다군이다은'), // 변경된 부분
+                BroadReshow(broadcastName: '아융이와다은이'), // 변경된 부분
           ),
         );
       },
@@ -94,16 +77,6 @@ class BroadcastStorageScreen extends StatelessWidget {
                   child: broadcast,
                 ))
             .toList(),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => SpeechScreen()),
-          );
-        },
-        child: Icon(Icons.mic),
-        tooltip: '화자 분석하기',
       ),
       bottomNavigationBar: BottomAppBar(
         child: Row(

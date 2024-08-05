@@ -49,6 +49,7 @@ dependencies:
   video_player: ^2.2.0
   flutter_sound: any
   permission_handler: any
+  path_provider: ^2.0.11
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,10 @@ flutter:
     - assets/img2.jpeg
     - assets/img3.jpeg
     - assets/img4.jpeg
+    - assets/ayuni.jpeg
+    - assets/daeun.jpeg
+    - assets/video1.mp4
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:
