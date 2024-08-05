@@ -123,23 +123,30 @@ class _BroadReshowState extends State<BroadReshow> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (_controller.value.isInitialized)
-              MouseRegion(
-                onEnter: (_) {
-                  setState(() {
-                    _isMouseOver = true;
-                  });
-                },
-                onExit: (_) {
-                  setState(() {
-                    _isMouseOver = false;
-                  });
-                },
-                child: AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
+              Expanded(
+                child: MouseRegion(
+                  onEnter: (_) {
+                    setState(() {
+                      _isMouseOver = true;
+                    });
+                  },
+                  onExit: (_) {
+                    setState(() {
+                      _isMouseOver = false;
+                    });
+                  },
                   child: Stack(
-                    alignment: Alignment.bottomCenter,
                     children: [
-                      VideoPlayer(_controller),
+                      Center(
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: SizedBox(
+                            width: _controller.value.size.width,
+                            height: _controller.value.size.height,
+                            child: VideoPlayer(_controller),
+                          ),
+                        ),
+                      ),
                       if (_showSubtitles) _buildSubtitle(),
                       if (_isMouseOver || _isPlaying) _buildPlayPauseButton(),
                     ],
@@ -246,11 +253,20 @@ class _BroadReshowState extends State<BroadReshow> {
           },
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // Rounded corners
+              borderRadius: BorderRadius.circular(12), // Rounded corners
             ),
-            padding: EdgeInsets.symmetric(vertical: 15), // Button padding
+            padding: EdgeInsets.symmetric(
+                vertical: 16, horizontal: 24), // Button padding
+            elevation: 8, // Shadow effect
+            shadowColor: Colors.black.withOpacity(0.3), // Shadow color
           ),
-          child: Text('자막 생성하기'),
+          child: Text(
+            '자막 생성하기',
+            style: TextStyle(
+              fontSize: 18, // Font size
+              fontWeight: FontWeight.bold, // Font weight
+            ),
+          ),
         ),
         SizedBox(height: 10),
       ],
