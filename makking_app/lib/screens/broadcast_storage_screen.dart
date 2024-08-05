@@ -5,8 +5,8 @@ import 'face_recognition_screen.dart';
 import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
 import 'broad1.dart';
-import 'broad2.dart';
-import 'speech.dart'; // Add this import
+import 'broad_reshow.dart'; // 추가된 부분
+import 'speech.dart';
 import 'broadcast_storage_screen.dart';
 
 class BroadcastStorageScreen extends StatelessWidget {
@@ -22,7 +22,8 @@ class BroadcastStorageScreen extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Broadcast1(broadcastName: '와꾸대장봉준'),
+            builder: (context) =>
+                BroadReshow(broadcastName: '와꾸대장봉준'), // 변경된 부분
           ),
         );
       },
@@ -38,7 +39,8 @@ class BroadcastStorageScreen extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Broadcast1(broadcastName: '이다군이다은'),
+            builder: (context) =>
+                BroadReshow(broadcastName: '이다군이다은'), // 변경된 부분
           ),
         );
       },
@@ -326,8 +328,8 @@ class CustomSearchDelegate extends SearchDelegate {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    Broadcast1(broadcastName: broadcast.broadcastName),
+                builder: (context) => BroadReshow(
+                    broadcastName: broadcast.broadcastName), // 변경된 부분
               ),
             );
           },
