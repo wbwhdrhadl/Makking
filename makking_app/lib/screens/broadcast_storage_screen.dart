@@ -6,7 +6,7 @@ import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
 import 'broad1.dart';
 import 'broad_reshow.dart'; // 추가된 부분
-
+import 'broadcast_list_screen.dart';
 import 'broadcast_storage_screen.dart';
 
 class BroadcastStorageScreen extends StatelessWidget {

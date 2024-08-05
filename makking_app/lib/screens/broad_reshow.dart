@@ -20,6 +20,10 @@ class _BroadReshowState extends State<BroadReshow> {
   int _currentSubtitleIndex = 0;
   bool _subtitlesLoaded = false;
   bool _isLoading = false;
+  bool _showSubtitles = false;
+  bool _isGeneratingSubtitles = false; // Track subtitle generation state
+  bool _isMouseOver = false; // Track mouse hover state
+  bool _isPlaying = false; // Track video playback state
 
   @override
   void initState() {
@@ -29,7 +33,12 @@ class _BroadReshowState extends State<BroadReshow> {
         setState(() {});
       });
 
-    _controller.addListener(_updateSubtitle);
+    _controller.addListener(() {
+      _updateSubtitle();
+      setState(() {
+        _isPlaying = _controller.value.isPlaying;
+      });
+    });
   }
 
   Future<void> _loadSubtitles() async {
@@ -60,7 +69,12 @@ class _BroadReshowState extends State<BroadReshow> {
               List<Map<String, dynamic>>.from(jsonResponse['transcript']);
           _subtitlesLoaded = true;
           _isLoading = false;
+          _isGeneratingSubtitles =
+              false; // Update the state after generating subtitles
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('자막 생성 완료!')),
+        );
       } else {
         throw Exception('Failed to load subtitles');
       }
@@ -68,6 +82,7 @@ class _BroadReshowState extends State<BroadReshow> {
       print('Error loading subtitles: $e');
       setState(() {
         _isLoading = false;
+        _isGeneratingSubtitles = false; // Update the state if there is an error
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load subtitles: $e')),
@@ -76,7 +91,7 @@ class _BroadReshowState extends State<BroadReshow> {
   }
 
   void _updateSubtitle() {
-    if (!_subtitlesLoaded) return;
+    if (!_subtitlesLoaded || !_showSubtitles) return;
 
     final position = _controller.value.position.inSeconds;
     for (int i = 0; i < _subtitles.length; i++) {
@@ -104,26 +119,49 @@ class _BroadReshowState extends State<BroadReshow> {
         title: Text(widget.broadcastName),
       ),
       body: Center(
-        child: _isLoading
-            ? CircularProgressIndicator() // 로딩 화면
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_controller.value.isInitialized)
-                    AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [
-                          VideoPlayer(_controller),
-                          _buildSubtitle(),
-                          _buildPlayPauseButton(),
-                        ],
-                      ),
-                    ),
-                  SizedBox(height: 20),
-                ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_controller.value.isInitialized)
+              MouseRegion(
+                onEnter: (_) {
+                  setState(() {
+                    _isMouseOver = true;
+                  });
+                },
+                onExit: (_) {
+                  setState(() {
+                    _isMouseOver = false;
+                  });
+                },
+                child: AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      VideoPlayer(_controller),
+                      if (_showSubtitles) _buildSubtitle(),
+                      if (_isMouseOver || _isPlaying) _buildPlayPauseButton(),
+                    ],
+                  ),
+                ),
               ),
+            if (!_controller.value.isInitialized) CircularProgressIndicator(),
+            SizedBox(height: 20),
+            _buildActionButtons(),
+            if (_isGeneratingSubtitles)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 10),
+                    Text('자막 생성 중입니다. 잠시만 기다려 주세요.'),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -166,16 +204,11 @@ class _BroadReshowState extends State<BroadReshow> {
   }
 
   Widget _buildPlayPauseButton() {
-    return GestureDetector(
-      onTap: () async {
-        if (!_subtitlesLoaded) {
-          await _loadSubtitles();
-          if (_subtitlesLoaded) {
-            setState(() {
-              _controller.play();
-            });
-          }
-        } else {
+    return Positioned(
+      left: MediaQuery.of(context).size.width / 2 - 30, // Center horizontally
+      top: MediaQuery.of(context).size.height / 2 - 30, // Center vertically
+      child: GestureDetector(
+        onTap: () async {
           setState(() {
             if (_controller.value.isPlaying) {
               _controller.pause();
@@ -183,19 +216,44 @@ class _BroadReshowState extends State<BroadReshow> {
               _controller.play();
             }
           });
-        }
-      },
-      child: Container(
-        alignment: Alignment.center,
-        color: Colors.transparent,
-        child: Icon(
-          _controller.value.isPlaying
-              ? Icons.pause_circle_filled
-              : Icons.play_circle_filled,
-          color: Colors.white,
-          size: 80,
+        },
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+            color: Colors.white,
+            size: 60,
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        ElevatedButton(
+          onPressed: () async {
+            setState(() {
+              _isGeneratingSubtitles = true; // Show loading indicator
+              _showSubtitles = true;
+            });
+            await _loadSubtitles(); // Load subtitles if the user chooses to generate them
+          },
+          style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Rounded corners
+            ),
+            padding: EdgeInsets.symmetric(vertical: 15), // Button padding
+          ),
+          child: Text('자막 생성하기'),
+        ),
+        SizedBox(height: 10),
+      ],
     );
   }
 }
