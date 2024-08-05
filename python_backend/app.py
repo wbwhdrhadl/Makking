@@ -23,10 +23,17 @@ app.add_middleware(
     allow_headers=["*"],  # 모든 HTTP 헤더 허용
 )
 
-# Initialize models
-model = whisper.load_model("medium", device="cpu")
-embedding_model = PretrainedSpeakerEmbedding("speechbrain/spkrec-ecapa-voxceleb", device=torch.device("cpu"))
-audio = Audio()
+# Initialize models as global variables
+model = None
+embedding_model = None
+audio = None
+
+@app.on_event("startup")
+async def startup_event():
+    global model, embedding_model, audio
+    model = whisper.load_model("medium", device="cpu")
+    embedding_model = PretrainedSpeakerEmbedding("speechbrain/spkrec-ecapa-voxceleb", device=torch.device("cpu"))
+    audio = Audio()
 
 def segment_embedding(segment, path, duration):
     start = segment["start"]
