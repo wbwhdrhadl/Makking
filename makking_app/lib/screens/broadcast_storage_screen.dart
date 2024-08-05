@@ -5,7 +5,7 @@ import 'face_recognition_screen.dart';
 import 'broadcast_screen.dart';
 import 'myaccout_screen.dart';
 import 'broad1.dart';
-import 'broad_reshow.dart'; // 추가된 부분
+import 'broad_reshow.dart';
 import 'broadcast_list_screen.dart';
 import 'broadcast_storage_screen.dart';
 
@@ -22,8 +22,7 @@ class BroadcastStorageScreen extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                BroadReshow(broadcastName: '아융이와다은이'), // 변경된 부분
+            builder: (context) => BroadReshow(broadcastName: '아융이와다은이'),
           ),
         );
       },
@@ -89,7 +88,7 @@ class BroadcastStorageScreen extends StatelessWidget {
               },
             ),
             IconButton(
-              icon: Icon(Icons.save), // 저장된 방송 화면 아이콘
+              icon: Icon(Icons.save),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -125,8 +124,6 @@ class BroadcastStorageScreen extends StatelessWidget {
     );
   }
 }
-
-// (Remaining code unchanged)
 
 class LiveStreamTile extends StatefulWidget {
   final String profileImage;
@@ -217,40 +214,75 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.all(10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 5,
       child: InkWell(
         onTap: () {
           incrementViewers();
           widget.onTap(context);
         },
-        child: Column(
+        child: Row(
           children: [
-            ListTile(
-              leading: CircleAvatar(
-                backgroundImage: AssetImage(widget.profileImage),
-              ),
-              title: Text(widget.streamerName),
-              subtitle: Text(widget.description),
-              trailing: Text('🔴 $viewers viewers'),
-            ),
-            Container(
-              height: 150,
-              child: Image.asset(
-                widget.thumbnail,
-                fit: BoxFit.cover,
-                width: double.infinity,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.thumb_up),
-                    onPressed: incrementLikes,
+            Expanded(
+              flex: 1,
+              child: Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius:
+                      BorderRadius.horizontal(left: Radius.circular(12)),
+                  image: DecorationImage(
+                    image: AssetImage(widget.thumbnail),
+                    fit: BoxFit.cover,
                   ),
-                  Text('$likes likes'),
-                ],
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.streamerName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      widget.description,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.thumb_up, color: Colors.blue),
+                              onPressed: incrementLikes,
+                            ),
+                            Text('$likes likes'),
+                          ],
+                        ),
+                        Text(
+                          '🔴 $viewers viewers',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -301,8 +333,8 @@ class CustomSearchDelegate extends SearchDelegate {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => BroadReshow(
-                    broadcastName: broadcast.broadcastName), // 변경된 부분
+                builder: (context) =>
+                    BroadReshow(broadcastName: broadcast.broadcastName),
               ),
             );
           },
