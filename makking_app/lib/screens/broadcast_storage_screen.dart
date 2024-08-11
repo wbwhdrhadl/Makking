@@ -10,6 +10,10 @@ import 'broadcast_list_screen.dart';
 import 'broadcast_storage_screen.dart';
 
 class BroadcastStorageScreen extends StatelessWidget {
+  final String userId; // userId 필드 추가
+
+  BroadcastStorageScreen({required this.userId}); // userId를 생성자에서 받아옴
+
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
       profileImage: 'assets/daeun.jpeg',
@@ -18,11 +22,12 @@ class BroadcastStorageScreen extends StatelessWidget {
       viewers: 56880,
       thumbnail: 'assets/ayuni.jpeg',
       broadcastName: '아융이와다은이',
-      onTap: (BuildContext context) {
+      onTap: (BuildContext context, String userId) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => BroadReshow(broadcastName: '아융이와다은이'),
+            builder: (context) =>
+                BroadReshow(broadcastName: 'example', userId: userId),
           ),
         );
       },
@@ -41,7 +46,8 @@ class BroadcastStorageScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BroadcastScreen(),
+                  builder: (context) =>
+                      BroadReshow(broadcastName: 'example', userId: userId),
                 ),
               );
             },
@@ -52,8 +58,12 @@ class BroadcastStorageScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      FaceRecognitionScreen(title: '얼굴 인식 화면'),
+                  builder: (context) => FaceRecognitionScreen(
+                    title: '얼굴 인식 화면',
+                    userId: userId, // userId 전달
+                    isMosaicEnabled: false, // 예시 값 설정
+                    isSubtitleEnabled: false, // 예시 값 설정
+                  ),
                 ),
               );
             },
@@ -63,7 +73,8 @@ class BroadcastStorageScreen extends StatelessWidget {
             onPressed: () {
               showSearch(
                 context: context,
-                delegate: CustomSearchDelegate(broadcastList: broadcastList),
+                delegate:
+                    CustomSearchDelegate(broadcastList: broadcastList, userId: userId),
               );
             },
           ),
@@ -72,7 +83,7 @@ class BroadcastStorageScreen extends StatelessWidget {
       body: ListView(
         children: broadcastList
             .map((broadcast) => InkWell(
-                  onTap: () => broadcast.onTap(context),
+                  onTap: () => broadcast.onTap(context, userId),
                   child: broadcast,
                 ))
             .toList(),
@@ -84,7 +95,13 @@ class BroadcastStorageScreen extends StatelessWidget {
             IconButton(
               icon: Icon(Icons.home),
               onPressed: () {
-                // Implement home navigation or refresh
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        BroadReshow(broadcastName: 'example', userId: userId),
+                  ),
+                );
               },
             ),
             IconButton(
@@ -93,7 +110,8 @@ class BroadcastStorageScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadcastStorageScreen(),
+                    builder: (context) =>
+                        BroadReshow(broadcastName: 'example', userId: userId),
                   ),
                 );
               },
@@ -103,7 +121,8 @@ class BroadcastStorageScreen extends StatelessWidget {
               onPressed: () {
                 showSearch(
                   context: context,
-                  delegate: CustomSearchDelegate(broadcastList: broadcastList),
+                  delegate:
+                      CustomSearchDelegate(broadcastList: broadcastList, userId: userId),
                 );
               },
             ),
@@ -113,7 +132,8 @@ class BroadcastStorageScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AccountSettingsScreen(),
+                    builder: (context) =>
+                        AccountSettingsScreen(userId: userId), // userId 전달
                   ),
                 );
               },
@@ -132,7 +152,7 @@ class LiveStreamTile extends StatefulWidget {
   final int viewers;
   final String thumbnail;
   final String broadcastName;
-  final Function(BuildContext) onTap;
+  final Function(BuildContext, String) onTap;
 
   LiveStreamTile({
     required this.profileImage,
@@ -221,7 +241,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
       child: InkWell(
         onTap: () {
           incrementViewers();
-          widget.onTap(context);
+          widget.onTap(context, widget.broadcastName);
         },
         child: Row(
           children: [
@@ -294,8 +314,9 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
 
 class CustomSearchDelegate extends SearchDelegate {
   final List<LiveStreamTile> broadcastList;
+  final String userId;
 
-  CustomSearchDelegate({required this.broadcastList});
+  CustomSearchDelegate({required this.broadcastList, required this.userId});
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -333,8 +354,10 @@ class CustomSearchDelegate extends SearchDelegate {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    BroadReshow(broadcastName: broadcast.broadcastName),
+                builder: (context) => BroadReshow(
+                  broadcastName: broadcast.broadcastName,
+                  userId: userId,
+                ),
               ),
             );
           },

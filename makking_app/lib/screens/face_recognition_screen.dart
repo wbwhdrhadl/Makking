@@ -7,8 +7,16 @@ import 'broadcast_screen.dart';
 
 class FaceRecognitionScreen extends StatefulWidget {
   final String title;
+  final String userId;
+  final bool isMosaicEnabled;
+  final bool isSubtitleEnabled;
 
-  FaceRecognitionScreen({required this.title});
+  FaceRecognitionScreen({
+    required this.title,
+    required this.userId,
+    required this.isMosaicEnabled,
+    required this.isSubtitleEnabled,
+  });
 
   @override
   _FaceRecognitionScreenState createState() => _FaceRecognitionScreenState();
@@ -36,7 +44,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://localhost:5001/uploadFile'); // Express 서버 주소
+    final uri = Uri.parse('http://192.168.1.115:5001/uploadFile'); // Express 서버 주소
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
         'attachment',
@@ -51,7 +59,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
 
       if (response.statusCode == 200) {
         final imageUrl = responseJson['url'];
-        await processImage(imageUrl);
+        await sendBroadcastDataToServer(imageUrl); // 서버로 데이터 전송
       } else {
         showErrorDialog('이미지 업로드 실패: ${responseJson['message']}');
       }
@@ -64,26 +72,46 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
     }
   }
 
-  Future<void> processImage(String imageUrl) async {
-    final uri =
-        Uri.parse('http://localhost:8000/processImage'); // FastAPI 서버 주소
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'image_url': imageUrl}),
-    );
-
-    if (response.statusCode == 200) {
-      final responseJson = json.decode(response.body);
-      final processedImage = base64Decode(responseJson['image']);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BroadcastScreen(imageBytes: processedImage),
-        ),
+  Future<void> sendBroadcastDataToServer(String imageUrl) async {
+    final uri = Uri.parse('http://192.168.1.115:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': widget.userId,
+          'title': widget.title,
+          'is_mosaic_enabled': widget.isMosaicEnabled,
+          'is_subtitle_enabled': widget.isSubtitleEnabled,
+          'image_url': imageUrl,
+        }),
       );
-    } else {
-      showErrorDialog('이미지 처리 실패: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseJson = json.decode(response.body);
+
+        // 여기서 받은 응답의 이미지 URL을 처리합니다.
+        final String? receivedImageUrl = responseJson['image'];
+
+        if (receivedImageUrl != null) {
+          // 이미지를 사용하는 다른 페이지로 이동
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BroadcastScreen(
+                imageBytes: null, // 이미지는 사용하지 않으므로 null로 설정
+                userId: widget.userId,
+              ),
+            ),
+          );
+        } else {
+          showErrorDialog('이미지 URL이 없습니다.');
+        }
+      } else {
+        showErrorDialog('이미지 처리 실패: ${response.body}');
+      }
+    } catch (e) {
+      showErrorDialog('서버 요청 중 오류 발생: $e');
     }
   }
 

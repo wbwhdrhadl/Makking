@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'broadcast_list_screen.dart'; // BroadcastListScreen을 임포트
-import 'register_screen.dart'; // 새로 만든 RegisterScreen을 임포트
+import 'broadcast_start_screen.dart'; // BroadcastStartScreen을 임포트
+import 'broadcast_list_screen.dart'; // BroadcastStartScreen을 임포트
+import 'register_screen.dart'; // RegisterScreen을 임포트
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -12,7 +13,7 @@ class LoginScreen extends StatelessWidget {
   Future<void> _login(BuildContext context) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5001/login'), // 서버 URL
+        Uri.parse('http://192.168.1.115:5001/login'), // Server URL
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -27,27 +28,37 @@ class LoginScreen extends StatelessWidget {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('Login successful: ${data['msg']}');
-        await _saveSessionData(
-            _usernameController.text, _passwordController.text);
-        _showWelcomeDialog(context, _usernameController.text);
+
+        // Safely extract userId, handling the case where it might be missing or null
+        final String? userId = data['userId'] as String?;
+
+        if (userId != null) {
+          print('Login successful: ${data['msg']}');
+          await _saveSessionData(userId, _usernameController.text, _passwordController.text);
+          _showWelcomeDialog(context, _usernameController.text, userId);
+        } else {
+          // Handle the case where userId is not present or is null
+          print('Login failed: userId is missing or null');
+          _showDialog(context, 'Login failed: userId is missing or null.');
+        }
       } else {
         print('Login failed: ${response.body}');
-        _showDialog(context, '가입되지 않은 회원입니다.');
+        _showDialog(context, 'Login failed: ${response.body}');
       }
     } catch (e) {
       print('Connection failed: $e');
-      _showDialog(context, '서버 연결 실패');
+      _showDialog(context, 'Server connection failed.');
     }
   }
 
-  Future<void> _saveSessionData(String username, String password) async {
+  Future<void> _saveSessionData(String userId, String username, String password) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userId', userId); // userId 저장
     await prefs.setString('username', username);
     await prefs.setString('password', password);
   }
 
-  void _showWelcomeDialog(BuildContext context, String username) {
+  void _showWelcomeDialog(BuildContext context, String username, String userId) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -62,7 +73,7 @@ class LoginScreen extends StatelessWidget {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadcastListScreen(),
+                    builder: (context) => BroadcastListScreen(userId: userId), // BroadcastStartScreen으로 userId 전달
                   ),
                 );
               },

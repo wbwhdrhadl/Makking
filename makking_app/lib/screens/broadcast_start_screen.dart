@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import 'face_recognition_screen.dart'; // FaceRecognitionScreen 임포트
+import 'face_recognition_screen.dart';
 
 class BroadcastStartScreen extends StatefulWidget {
+  final String userId;
+
+  BroadcastStartScreen({required this.userId});
+
   @override
   _BroadcastStartScreenState createState() => _BroadcastStartScreenState();
 }
@@ -23,18 +27,10 @@ class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Makking만의 방송 환경을 설정해보세요!',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 24),
               TextField(
                 controller: titleController,
-                decoration: InputDecoration(
-                  labelText: '방송 제목',
-                ),
+                decoration: InputDecoration(labelText: '방송 제목'),
               ),
-              SizedBox(height: 24),
               SwitchListTile(
                 title: Text('유해물질 모자이크'),
                 value: isMosaicEnabled,
@@ -53,14 +49,17 @@ class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
                   });
                 },
               ),
-              SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          FaceRecognitionScreen(title: '얼굴 인식 화면'),
+                      builder: (context) => FaceRecognitionScreen(
+                        title: titleController.text,
+                        userId: widget.userId, // userId 전달
+                        isMosaicEnabled: isMosaicEnabled,
+                        isSubtitleEnabled: isSubtitleEnabled,
+                      ),
                     ),
                   );
                 },

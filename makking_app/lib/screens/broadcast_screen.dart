@@ -9,8 +9,9 @@ import 'dart:async';
 
 class BroadcastScreen extends StatefulWidget {
   final Uint8List? imageBytes;
+  final String userId; // Add userId as a required parameter
 
-  BroadcastScreen({this.imageBytes});
+  BroadcastScreen({this.imageBytes, required this.userId}); // Update constructor
 
   @override
   _BroadcastScreenState createState() => _BroadcastScreenState();
@@ -33,9 +34,10 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void initializeSocket() {
-    _socket = IO.io('http://localhost:5001', <String, dynamic>{
+    _socket = IO.io('http://192.168.1.115:5001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'query': {'userId': widget.userId}, // Pass userId with the socket connection
     });
     _socket!.connect();
 

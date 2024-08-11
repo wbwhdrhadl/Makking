@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For JSON processing
-import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:makking_app/screens/broadcast_start_screen.dart';
 import 'package:path/path.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Placeholder Widgets - Make sure to implement or correct these based on your actual files
 import 'face_recognition_screen.dart';
@@ -26,14 +23,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: BroadcastListScreen(),
+      home: BroadcastListScreen(userId: 'exampleUserId'), // 예시로 userId 전달
     );
   }
 }
 
-// (Remaining code unchanged)
-
 class BroadcastListScreen extends StatelessWidget {
+  final String userId; // userId 필드 추가
+
+  BroadcastListScreen({required this.userId}); // userId를 생성자에서 받아옴
+
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
       profileImage: 'assets/img3.jpeg',
@@ -42,7 +41,8 @@ class BroadcastListScreen extends StatelessWidget {
       viewers: 56880,
       thumbnail: 'assets/img2.jpeg',
       broadcastName: '와꾸대장봉준',
-      onTap: (BuildContext context) {
+      userId: 'exampleUserId', // userId 전달
+      onTap: (BuildContext context, String userId) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -58,7 +58,8 @@ class BroadcastListScreen extends StatelessWidget {
       viewers: 233,
       thumbnail: 'assets/img1.jpeg',
       broadcastName: '이다군이다은',
-      onTap: (BuildContext context) {
+      userId: 'exampleUserId', // userId 전달
+      onTap: (BuildContext context, String userId) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -80,7 +81,9 @@ class BroadcastListScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => BroadcastStartScreen()),
+                MaterialPageRoute(
+                  builder: (context) => BroadcastStartScreen(userId: userId), // userId 전달
+                ),
               );
             },
           ),
@@ -98,7 +101,7 @@ class BroadcastListScreen extends StatelessWidget {
       body: ListView(
         children: broadcastList
             .map((broadcast) => InkWell(
-                  onTap: () => broadcast.onTap(context),
+                  onTap: () => broadcast.onTap(context, userId), // userId 전달
                   child: broadcast,
                 ))
             .toList(),
@@ -119,7 +122,7 @@ class BroadcastListScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadcastStorageScreen(),
+                    builder: (context) => BroadcastStorageScreen(userId: userId), // userId 전달
                   ),
                 );
               },
@@ -139,7 +142,7 @@ class BroadcastListScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AccountSettingsScreen(),
+                    builder: (context) => AccountSettingsScreen(userId: userId), // userId 전달
                   ),
                 );
               },
@@ -151,16 +154,15 @@ class BroadcastListScreen extends StatelessWidget {
   }
 }
 
-// (Remaining code unchanged)
-
-class LiveStreamTile extends StatefulWidget {
+class LiveStreamTile extends StatelessWidget {
   final String profileImage;
   final String streamerName;
   final String description;
   final int viewers;
   final String thumbnail;
   final String broadcastName;
-  final Function(BuildContext) onTap;
+  final String userId; // userId 필드 추가
+  final Function(BuildContext, String) onTap; // onTap 함수 수정
 
   LiveStreamTile({
     required this.profileImage,
@@ -169,98 +171,30 @@ class LiveStreamTile extends StatefulWidget {
     required this.viewers,
     required this.thumbnail,
     required this.broadcastName,
+    required this.userId, // userId 추가
     required this.onTap,
   });
-
-  @override
-  _LiveStreamTileState createState() => _LiveStreamTileState();
-}
-
-class _LiveStreamTileState extends State<LiveStreamTile> {
-  int likes = 0;
-  int viewers = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchData();
-  }
-
-  Future<void> fetchData() async {
-    try {
-      var response = await http.get(
-          Uri.parse('http://localhost:5001/messages/${widget.broadcastName}'));
-      if (response.statusCode == 200) {
-        var data = json.decode(response.body);
-        setState(() {
-          likes = data['likes'] ?? 0;
-          viewers = data['viewers'] ?? widget.viewers;
-        });
-      } else {
-        print('Failed to load data');
-      }
-    } catch (e) {
-      print('Error fetching data: $e');
-    }
-  }
-
-  void incrementLikes() async {
-    try {
-      var response = await http.post(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}/like'));
-      if (response.statusCode == 200) {
-        var data = json.decode(response.body);
-        setState(() {
-          likes = data['likes'];
-        });
-      } else {
-        print('Failed to increment likes');
-      }
-    } catch (e) {
-      print('Error incrementing likes: $e');
-    }
-  }
-
-  void incrementViewers() async {
-    try {
-      var response = await http.post(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}/viewers'));
-      if (response.statusCode == 200) {
-        var data = json.decode(response.body);
-        setState(() {
-          viewers = data['viewers'];
-        });
-      } else {
-        print('Failed to increment viewers');
-      }
-    } catch (e) {
-      print('Error incrementing viewers: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.all(10),
       child: InkWell(
-        onTap: () {
-          incrementViewers();
-          widget.onTap(context);
-        },
+        onTap: () => onTap(context, userId), // userId 전달
         child: Column(
           children: [
             ListTile(
               leading: CircleAvatar(
-                backgroundImage: AssetImage(widget.profileImage),
+                backgroundImage: AssetImage(profileImage),
               ),
-              title: Text(widget.streamerName),
-              subtitle: Text(widget.description),
+              title: Text(streamerName),
+              subtitle: Text(description),
               trailing: Text('🔴 $viewers viewers'),
             ),
             Container(
               height: 150,
               child: Image.asset(
-                widget.thumbnail,
+                thumbnail,
                 fit: BoxFit.cover,
                 width: double.infinity,
               ),
@@ -272,9 +206,9 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.thumb_up),
-                    onPressed: incrementLikes,
+                    onPressed: () {}, // 좋아요 기능 구현 필요
                   ),
-                  Text('$likes likes'),
+                  Text('Likes'), // 좋아요 수를 보여줄 수 있음
                 ],
               ),
             ),

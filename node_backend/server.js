@@ -182,7 +182,8 @@ io.on("connection", (socket) => {
 });
 
 // 라우터 설정
-const chatRouter = require("./routes/broaddata.js");
+const chatRouter = require("./routes/broaddetail.js");
+const broadSettingRouter = require("./routes/broadSetting.js");
 const s3Router = require("./routes/s3.js");
 const userRouter = require("./routes/User.js");
 const kakaoUserRouter = require("./routes/kakaoUser.js");
@@ -193,9 +194,10 @@ app.use("/", chatRouter);
 app.use("/", s3Router);
 app.use("/", kakaoUserRouter);
 app.use("/", userRouter);
+app.use("/", broadSettingRouter);
 
 // 포트 설정 및 서버 시작
-const PORT = process.env.PORT || 5009;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () =>
   console.log(`서버가 포트 ${PORT}에서 시작되었습니다`)
 );

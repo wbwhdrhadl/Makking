@@ -57,31 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => BroadcastListScreen(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                    textStyle: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    fixedSize: Size(screenWidth * 0.6, screenHeight * 0.08),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(0),
-                    ),
-                  ),
-                  child: Text('비회원으로 계속하기'),
-                ),
-                SizedBox(height: screenHeight * 0.02),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
                         builder: (context) => LoginScreen(),
                       ),
                     );
@@ -143,12 +118,9 @@ class _HomeScreenState extends State<HomeScreen> {
       OAuthToken token = await UserApi.instance.loginWithKakaoTalk();
       print('카카오톡으로 로그인 성공');
       await _printUserInfo(token);
-      Navigator.push(context,
-          MaterialPageRoute(builder: (context) => BroadcastListScreen()));
     } catch (error) {
       print('카카오톡으로 로그인 실패: $error');
-      _loginWithKakaoAccount(
-          context); // Fallback to Kakao account login if KakaoTalk login fails
+      _loginWithKakaoAccount(context); // Fallback to Kakao account login if KakaoTalk login fails
     }
   }
 
@@ -189,6 +161,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await _sendNaverUserInfoToServer(
           id, email, name, sex, tel, accessToken // 액세스 토큰을 문자열로 전달
           );
+
+      // 네이버 로그인 성공 후 BroadcastListScreen으로 이동, userId 전달
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BroadcastListScreen(userId: id),
+        ),
+      );
     } catch (error) {
       print('naver login error $error');
     }
@@ -236,6 +216,15 @@ class _HomeScreenState extends State<HomeScreen> {
       print("이름: ${user.kakaoAccount?.profile?.nickname}");
       print("성별: ${user.kakaoAccount?.gender}");
       print("전화번호: ${user.kakaoAccount?.phoneNumber}");
+
+      // 카카오 로그인 성공 후 BroadcastListScreen으로 이동, userId 전달
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BroadcastListScreen(userId: user.id.toString()),
+        ),
+      );
+
       // 사용자 정보를 서버로 전송
       await _sendUserInfoToServer(user, token.accessToken);
     } catch (error) {

@@ -63,22 +63,29 @@ router.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
-    req.session.user = {
-      id:username,
-      pw:password,
-      authorized:true,
-    };
-    console.log("cookie입니다.")
-    console.log(req.session.cookie)
-    console.log("user입니다.")
-    console.log(req.session.user)
 
-    res.json({ msg: "Login successful" });
+    req.session.user = {
+      id: username, // 기존 코드를 유지
+      pw: password,
+      authorized: true,
+    };
+
+    console.log("cookie입니다.");
+    console.log(req.session.cookie);
+    console.log("user입니다.");
+    console.log(req.session.user);
+    console.log('User ID:', user._id); // Add this line for debugging
+    // user._id 추가 반환
+    res.json({
+      msg: "Login successful",
+      userId: user._id,  // MongoDB의 _id를 userId로 반환
+    });
   } catch (err) {
     console.error("Error during user login:", err.message);
     res.status(500).send("Server error");
   }
 });
+
 
 router.get("/logout", async (req, res) => {
   console.log("로그아웃을 하면 다시 로그인 후 이용하여야합니다.");

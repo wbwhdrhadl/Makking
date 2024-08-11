@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
+  final String userId;  // userId 필드를 추가합니다.
+
+  AccountSettingsScreen({required this.userId});  // 생성자에서 userId를 받아옵니다.
+
   @override
   _AccountSettingsScreenState createState() => _AccountSettingsScreenState();
 }

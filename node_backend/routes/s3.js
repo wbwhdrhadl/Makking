@@ -17,6 +17,10 @@ const SECRET = process.env.SECRET;
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const MYREGION = process.env.MYREGION;
 
+const cors = require('cors');
+app.use(cors());
+
+
 const s3 = new AWS.S3({ accessKeyId: ID, secretAccessKey: SECRET, region: MYREGION });
 
 var storage = multer.memoryStorage(); // Use memory storage instead of disk storage
