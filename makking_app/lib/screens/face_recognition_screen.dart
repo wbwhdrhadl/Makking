@@ -59,7 +59,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
 
       if (response.statusCode == 200) {
         final imageUrl = responseJson['url'];
-        await sendBroadcastDataToServer(imageUrl); // 서버로 데이터 전송
+        await generateSignedUrl(imageUrl); // 서명된 URL 생성
       } else {
         showErrorDialog('이미지 업로드 실패: ${responseJson['message']}');
       }
@@ -72,7 +72,29 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
     }
   }
 
-  Future<void> sendBroadcastDataToServer(String imageUrl) async {
+  Future<void> generateSignedUrl(String imageUrl) async {
+    final uri = Uri.parse('http://192.168.1.115:5001/generateSignedUrl'); // 서명된 URL 생성 엔드포인트
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'imageUrl': imageUrl}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseJson = json.decode(response.body);
+        final signedUrl = responseJson['signedUrl'];
+
+        await sendBroadcastDataToServer(signedUrl); // 서명된 URL로 방송 데이터 전송
+      } else {
+        showErrorDialog('서명된 URL 생성 실패: ${response.body}');
+      }
+    } catch (e) {
+      showErrorDialog('서명된 URL 생성 중 오류 발생: $e');
+    }
+  }
+
+  Future<void> sendBroadcastDataToServer(String signedUrl) async {
     final uri = Uri.parse('http://192.168.1.115:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
     try {
       final response = await http.post(
@@ -83,7 +105,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
           'title': widget.title,
           'is_mosaic_enabled': widget.isMosaicEnabled,
           'is_subtitle_enabled': widget.isSubtitleEnabled,
-          'image_url': imageUrl,
+          'image_url': signedUrl,
         }),
       );
 

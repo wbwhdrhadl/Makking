@@ -3,13 +3,11 @@ from fastapi.responses import JSONResponse
 import cv2
 import numpy as np
 import torch
-import os
 import face_recognition
 from sklearn.metrics.pairwise import cosine_similarity
 from yolo5face.get_model import get_model
-import requests
-from io import BytesIO
 import base64
+import requests
 
 app = FastAPI()
 
@@ -17,6 +15,9 @@ app = FastAPI()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = get_model("yolov5n", device=device, min_face=24)
 
+# 전역 변수로 이미지 캐시 설정
+cached_image = None
+reference_encoding = None
 
 # 라플라시안 필터를 사용하여 이미지의 고주파 성분 추출
 def extract_high_freq_features(image, size=(256, 256)):
@@ -26,56 +27,60 @@ def extract_high_freq_features(image, size=(256, 256)):
     high_freq_features = laplacian.flatten()
     return high_freq_features
 
-
 # 코사인 유사도를 이미지끼리 직접 비교
 def cosine_similarity_images(img1, img2, size=(256, 256)):
     resized_img1 = cv2.resize(img1, size).flatten()
     resized_img2 = cv2.resize(img2, size).flatten()
-    return cosine_similarity(resized_img1.reshape(1, -1), resized_img2.reshape(1, -1))[
-        0
-    ][0]
+    return cosine_similarity(resized_img1.reshape(1, -1), resized_img2.reshape(1, -1))[0][0]
 
-
-@app.post("/processImage")
+@app.post("/process_image")
 async def process_image(request: Request):
+    global cached_image, reference_encoding
+
     data = await request.json()
-    image_url = data.get("image_url")
-    if not image_url:
-        raise HTTPException(status_code=400, detail="Image URL is required")
+    signed_url = data.get("signedUrl")
+    if not signed_url:
+        raise HTTPException(status_code=400, detail="Signed URL is required")
 
-    response = requests.get(image_url)
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail="Failed to fetch image from URL")
+    # 이미지를 한 번만 다운로드하여 캐시에 저장
+    if cached_image is None:
+        try:
+            response = requests.get(signed_url)
+            image_data = np.frombuffer(response.content, np.uint8)
+            image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            cached_image = rgb_image
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to download image: {str(e)}")
+    else:
+        rgb_image = cached_image
 
-    image_data = response.content
-    image = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # 참조 이미지 로드 및 얼굴 검출 (한 번만 수행)
+    if reference_encoding is None:
+        reference_image_path = "user_face_image_2.jpg"
+        reference_image = cv2.imread(reference_image_path)
+        reference_image = cv2.cvtColor(reference_image, cv2.COLOR_BGR2RGB)
 
-    reference_image_path = "user_face_image_2.jpg"
-    reference_image = cv2.imread(reference_image_path)
-    reference_image = cv2.cvtColor(reference_image, cv2.COLOR_BGR2RGB)
-
-    # 참조 이미지에서 얼굴 검출
-    boxes, _, _ = model(reference_image, target_size=512)
-    if len(boxes) > 0:
-        box = boxes[0]
-        x1, y1, x2, y2 = map(int, box)
-        cropped_reference_face = reference_image[y1:y2, x1:x2]
-        reference_face_encodings = face_recognition.face_encodings(
-            reference_image, [(y1, x2, y2, x1)]
-        )
-        if reference_face_encodings:
-            reference_encoding = reference_face_encodings[0]
+        boxes, _, _ = model(reference_image, target_size=512)
+        if len(boxes) > 0:
+            box = boxes[0]
+            x1, y1, x2, y2 = map(int, box)
+            cropped_reference_face = reference_image[y1:y2, x1:x2]
+            reference_face_encodings = face_recognition.face_encodings(
+                reference_image, [(y1, x2, y2, x1)]
+            )
+            if reference_face_encodings:
+                reference_encoding = reference_face_encodings[0]
+            else:
+                return JSONResponse(
+                    content={"message": "참조 이미지에서 얼굴 특징을 추출할 수 없습니다."},
+                    status_code=400,
+                )
         else:
             return JSONResponse(
-                content={"message": "참조 이미지에서 얼굴 특징을 추출할 수 없습니다."},
+                content={"message": "참조 이미지에서 얼굴을 감지할 수 없습니다."},
                 status_code=400,
             )
-    else:
-        return JSONResponse(
-            content={"message": "참조 이미지에서 얼굴을 감지할 수 없습니다."},
-            status_code=400,
-        )
 
     # 업로드된 이미지에서 얼굴 검출 및 처리
     boxes, key_points, scores = model(rgb_image, target_size=512)
@@ -146,6 +151,14 @@ async def process_image(request: Request):
         return JSONResponse(
             content={"message": "얼굴이 탐지되지 않았습니다."}, status_code=400
         )
+
+
+@app.post("/reset_cache")
+async def reset_cache():
+    global cached_image, reference_encoding
+    cached_image = None
+    reference_encoding = None
+    return JSONResponse(content={"message": "캐시가 초기화되었습니다."}, status_code=200)
 
 
 if __name__ == "__main__":

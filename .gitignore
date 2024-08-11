@@ -51,3 +51,7 @@ python_backend/venv/Lib/site-packages/
 python_backend/venv/Lib
 python_backend/venv/Lib/site-packages/annotated_types-0.7.0.dist-info/RECORD
 myenv/
+/makking_app/build
+/makking_app/linux
+/makking_app/linux/flutter
+makking_app/pubspec.lock
