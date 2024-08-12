@@ -46,7 +46,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void initializeVideoPlayer() {
-    String hlsUrl = "http://192.168.1.115:5001/stream/output.m3u8";
+    String hlsUrl = "http://172.30.1.66:5001/stream/output.m3u8";
     _videoPlayerController = VideoPlayerController.network(hlsUrl)
       ..initialize().then((_) {
         setState(() {});
@@ -55,7 +55,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void initializeSocket() {
-    _socket = IO.io('http://192.168.1.115:5001', <String, dynamic>{
+    _socket = IO.io('http://172.30.1.66:5001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });

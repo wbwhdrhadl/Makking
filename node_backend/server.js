@@ -120,38 +120,31 @@ let lastReceivedImage = null; // 최근 수신된 이미지 데이터를 저장�
 io.on("connection", (socket) => {
   console.log("A new client has connected!");
 
-  socket.on("start_recording", () => {
+  let signedUrlSent = false; // 녹화 시작 시 한 번만 서명된 URL을 전송하기 위한 플래그
+
+  socket.on("start_recording", async (signedUrl) => {
     if (!recording) {
       startFFmpeg();
     }
-  });
 
-  socket.on("stop_recording", () => {
-    if (recording) {
-      stopFFmpeg();
-      lastReceivedImage = null; // 녹화 중지 시 마지막 이미지 캐시 초기화
-    }
-  });
-
-  let signedUrlSent = false;
-
-  socket.on("stream_image", async (imageBase64) => {
     if (!signedUrlSent && signedUrl) {
-      // 처음 한 번만 서명된 URL 전송
       try {
-        await axios.post("http://localhost:5003/setup_reference_image", {
+        // 모델 서버에 서명된 URL을 한 번만 전송
+        const response = await axios.post("http://localhost:5003/process_image", {
           signedUrl: signedUrl,
         });
+        console.log("Signed URL successfully sent to model server.");
         signedUrlSent = true;
-        console.log("Signed URL sent successfully");
       } catch (error) {
-        console.error("Error sending signed URL:", error);
+        console.error("Error sending signed URL to model server:", error);
       }
     }
+  });
 
+  socket.on("stream_image", async (imageBase64) => {
     if (imageBase64) {
       try {
-        // 이후로는 계속해서 카메라로 찍은 이미지 전송
+        // 카메라에서 전송된 이미지를 모델 서버로 계속해서 전송
         const response = await axios.post("http://localhost:5003/process_image", {
           image: imageBase64,
         });
@@ -165,13 +158,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("stop_recording", () => {
-    signedUrlSent = false; // 녹화 중지 시 서명된 URL 전송 여부 초기화
+    if (recording) {
+      stopFFmpeg();
+      signedUrlSent = false; // 녹화 중지 시 서명된 URL 전송 여부 초기화
+    }
   });
 
   socket.on("disconnect", () => {
     console.log("Client disconnected");
   });
 });
+
 
 
 // MongoDB 연결 설정
@@ -187,14 +184,16 @@ mongoose
 // 라우터 설정
 const chatRouter = require("./routes/broaddetail.js");
 const broadSettingRouter = require("./routes/broadSetting.js");
-const s3URLRouter = require("./routes/s3_url.js");
+const s3URLPassRouter = require("./routes/s3_url_pass.js");
+const s3URLCreateRouter = require("./routes/s3_url_create.js");
 const s3Router = require("./routes/s3.js");
 const userRouter = require("./routes/User.js");
 const kakaoUserRouter = require("./routes/kakaoUser.js");
 const naverLoginRouter = require("./routes/naverUser.js");
 
 
-app.use("/", s3URLRouter);
+app.use("/", s3URLPassRouter);
+app.use("/", s3URLCreateRouter);
 app.use("/", naverLoginRouter);
 app.use("/", broadSettingRouter);
 app.use("/", chatRouter);

@@ -50,16 +50,16 @@ async def process_image(request: Request):
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             cached_image = rgb_image
+            print("이미지 다운로드 및 캐시 성공")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to download image: {str(e)}")
     else:
         rgb_image = cached_image
+        print("캐시된 이미지 사용")
 
     # 참조 이미지 로드 및 얼굴 검출 (한 번만 수행)
     if reference_encoding is None:
-        reference_image_path = "user_face_image_2.jpg"
-        reference_image = cv2.imread(reference_image_path)
-        reference_image = cv2.cvtColor(reference_image, cv2.COLOR_BGR2RGB)
+        reference_image = cached_image  # 캐시된 이미지를 참조 이미지로 사용
 
         boxes, _, _ = model(reference_image, target_size=512)
         if len(boxes) > 0:
@@ -71,6 +71,7 @@ async def process_image(request: Request):
             )
             if reference_face_encodings:
                 reference_encoding = reference_face_encodings[0]
+                print("참조 이미지에서 얼굴 특징 추출 성공")
             else:
                 return JSONResponse(
                     content={"message": "참조 이미지에서 얼굴 특징을 추출할 수 없습니다."},
@@ -116,6 +117,8 @@ async def process_image(request: Request):
                     if combined_similarity > best_combined_score:
                         best_combined_score = combined_similarity
                         most_similar_image_rect = (x1, y1, x2, y2)
+
+                    print(f"얼굴 검출 및 비교 성공: {combined_similarity}% 유사")
                 else:
                     return JSONResponse(
                         content={"message": "얼굴 특징 벡터를 추출할 수 없습니다."},
@@ -129,16 +132,17 @@ async def process_image(request: Request):
 
         for score, (x1, y1, x2, y2) in faces_info:
             if (x1, y1, x2, y2) != most_similar_image_rect:
-                face = image[y1:y2, x1:x2]
+                face = rgb_image[y1:y2, x1:x2]
                 center_x, center_y = (x2 - x1) // 2, (y2 - y1) // 2
                 radius = max(center_x, center_y)
                 mask = np.zeros((y2 - y1, x2 - x1), dtype=np.uint8)
                 cv2.circle(mask, (center_x, center_y), radius, (255, 255, 255), -1)
                 blurred_face = cv2.GaussianBlur(face, (99, 99), 50)
                 face = np.where(mask[:, :, None] == 255, blurred_face, face)
-                image[y1:y2, x1:x2] = face
+                rgb_image[y1:y2, x1:x2] = face
 
-        _, img_encoded = cv2.imencode(".jpg", image)
+        _, img_encoded = cv2.imencode(".jpg", rgb_image)
+        print("이미지 처리 및 인코딩 성공")
         return JSONResponse(
             content={
                 "message": "성공적으로 처리되었습니다.",
@@ -152,14 +156,13 @@ async def process_image(request: Request):
             content={"message": "얼굴이 탐지되지 않았습니다."}, status_code=400
         )
 
-
 @app.post("/reset_cache")
 async def reset_cache():
     global cached_image, reference_encoding
     cached_image = None
     reference_encoding = None
+    print("캐시가 초기화되었습니다.")
     return JSONResponse(content={"message": "캐시가 초기화되었습니다."}, status_code=200)
-
 
 if __name__ == "__main__":
     import uvicorn

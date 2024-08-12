@@ -44,7 +44,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://192.168.1.115:5001/uploadFile'); // Express 서버 주소
+    final uri = Uri.parse('http://172.30.1.66:5001/uploadFile'); // Express 서버 주소
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
         'attachment',
@@ -73,7 +73,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   }
 
   Future<void> generateSignedUrl(String imageUrl) async {
-    final uri = Uri.parse('http://192.168.1.115:5001/generateSignedUrl'); // 서명된 URL 생성 엔드포인트
+    final uri = Uri.parse('http://172.30.1.66:5001/generateSignedUrl'); // 서명된 URL 생성 엔드포인트
     try {
       final response = await http.post(
         uri,
@@ -95,7 +95,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   }
 
   Future<void> sendBroadcastDataToServer(String signedUrl) async {
-    final uri = Uri.parse('http://192.168.1.115:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
+    final uri = Uri.parse('http://172.30.1.66:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
     try {
       final response = await http.post(
         uri,
@@ -116,6 +116,9 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
         final String? receivedImageUrl = responseJson['image'];
 
         if (receivedImageUrl != null) {
+          // 서명된 URL을 Node.js 서버로 전송하는 함수 호출
+          await sendSignedUrlToNodeServer(receivedImageUrl);
+
           // 이미지를 사용하는 다른 페이지로 이동
           Navigator.push(
             context,
@@ -136,6 +139,29 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       showErrorDialog('서버 요청 중 오류 발생: $e');
     }
   }
+
+  // 서명된 URL을 Node.js 서버로 전송하는 함수
+  Future<void> sendSignedUrlToNodeServer(String signedUrl) async {
+    final nodeServerUri = Uri.parse('http://172.30.1.66:5001/sendSignedUrl'); // Node.js 서버 엔드포인트
+
+    try {
+      final response = await http.post(
+        nodeServerUri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'signedUrl': signedUrl}),
+      );
+
+      if (response.statusCode == 200) {
+        print('Signed URL successfully sent to the Node.js server.');
+      } else {
+        showErrorDialog('Node.js 서버에서 처리 실패: ${response.body}');
+      }
+    } catch (e) {
+      showErrorDialog('Node.js 서버 요청 중 오류 발생: $e');
+    }
+  }
+
+
 
   void showErrorDialog(String message) {
     showDialog(
