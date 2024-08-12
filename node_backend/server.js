@@ -50,7 +50,7 @@ function startFFmpeg() {
       "-r", "3",                // 프레임 레이트를 30fps로 설정
       "-i", "-",                 // 입력을 파이프로 받음
       "-c:v", "libx264",         // 출력 비디오 코덱을 H.264로 설정
-      "-preset", "veryfast",    // 인코딩 속도 우선의 설정
+      "-preset", "ultrafast",    // 인코딩 속도 우선의 설정
       "-tune", "zerolatency",    // 지연 시간을 최소화하기 위한 튜닝
       "-profile:v", "baseline",  // H.264 프로파일을 baseline으로 설정 (호환성)
       "-level", "3.1",           // H.264 레벨을 3.1로 설정
