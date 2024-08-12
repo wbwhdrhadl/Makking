@@ -39,11 +39,10 @@ async def process_image(request: Request):
 
     data = await request.json()
     signed_url = data.get("signedUrl")
-    if not signed_url:
-        raise HTTPException(status_code=400, detail="Signed URL is required")
+    image_data = data.get("image")
 
-    # 이미지를 한 번만 다운로드하여 캐시에 저장
-    if cached_image is None:
+    if signed_url:
+        # 서명된 URL을 처리하는 로직
         try:
             response = requests.get(signed_url)
             image_data = np.frombuffer(response.content, np.uint8)
@@ -53,35 +52,45 @@ async def process_image(request: Request):
             print("이미지 다운로드 및 캐시 성공")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to download image: {str(e)}")
-    else:
-        rgb_image = cached_image
-        print("캐시된 이미지 사용")
 
-    # 참조 이미지 로드 및 얼굴 검출 (한 번만 수행)
-    if reference_encoding is None:
-        reference_image = cached_image  # 캐시된 이미지를 참조 이미지로 사용
-
-        boxes, _, _ = model(reference_image, target_size=512)
-        if len(boxes) > 0:
-            box = boxes[0]
-            x1, y1, x2, y2 = map(int, box)
-            cropped_reference_face = reference_image[y1:y2, x1:x2]
-            reference_face_encodings = face_recognition.face_encodings(
-                reference_image, [(y1, x2, y2, x1)]
-            )
-            if reference_face_encodings:
-                reference_encoding = reference_face_encodings[0]
-                print("참조 이미지에서 얼굴 특징 추출 성공")
+        # 참조 이미지 설정
+        reference_image = cached_image
+        # 참조 이미지에서 얼굴 검출 및 인코딩
+        if reference_encoding is None:
+            boxes, _, _ = model(reference_image, target_size=512)
+            if len(boxes) > 0:
+                box = boxes[0]
+                x1, y1, x2, y2 = map(int, box)
+                cropped_reference_face = reference_image[y1:y2, x1:x2]
+                reference_face_encodings = face_recognition.face_encodings(
+                    reference_image, [(y1, x2, y2, x1)]
+                )
+                if reference_face_encodings:
+                    reference_encoding = reference_face_encodings[0]
+                    print("참조 이미지에서 얼굴 특징 추출 성공")
+                else:
+                    return JSONResponse(
+                        content={"message": "참조 이미지에서 얼굴 특징을 추출할 수 없습니다."},
+                        status_code=200,  # 얼굴 특징을 추출하지 못해도 200 OK를 반환
+                    )
             else:
                 return JSONResponse(
-                    content={"message": "참조 이미지에서 얼굴 특징을 추출할 수 없습니다."},
-                    status_code=400,
+                    content={"message": "참조 이미지에서 얼굴을 감지할 수 없습니다."},
+                    status_code=200,  # 얼굴을 감지하지 못해도 200 OK를 반환
                 )
-        else:
-            return JSONResponse(
-                content={"message": "참조 이미지에서 얼굴을 감지할 수 없습니다."},
-                status_code=400,
-            )
+
+    elif image_data:
+        # Base64로 인코딩된 이미지를 처리하는 로직
+        try:
+            decoded_image = base64.b64decode(image_data)
+            np_image = np.frombuffer(decoded_image, np.uint8)
+            rgb_image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+            rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to decode image: {str(e)}")
+
+    else:
+        raise HTTPException(status_code=400, detail="Either signedUrl or image data is required")
 
     # 업로드된 이미지에서 얼굴 검출 및 처리
     boxes, key_points, scores = model(rgb_image, target_size=512)
@@ -105,7 +114,7 @@ async def process_image(request: Request):
                         reference_encoding
                     )
                     cosine_sim = cosine_similarity_images(
-                        cropped_reference_face, cropped_face
+                        cached_image, cropped_face
                     )
                     face_similarity_normalized = face_similarity * 100
                     cosine_similarity_normalized = cosine_sim * 100
@@ -122,7 +131,7 @@ async def process_image(request: Request):
                 else:
                     return JSONResponse(
                         content={"message": "얼굴 특징 벡터를 추출할 수 없습니다."},
-                        status_code=400,
+                        status_code=200,  # 얼굴 특징 벡터를 추출하지 못해도 200 OK를 반환
                     )
             except Exception as e:
                 return JSONResponse(
@@ -153,7 +162,7 @@ async def process_image(request: Request):
 
     else:
         return JSONResponse(
-            content={"message": "얼굴이 탐지되지 않았습니다."}, status_code=400
+            content={"message": "얼굴이 탐지되지 않았습니다."}, status_code=200  # 얼굴이 탐지되지 않아도 200 OK를 반환
         )
 
 @app.post("/reset_cache")

@@ -43,45 +43,26 @@ let imageQueue = []; // 이미지를 저장할 큐
 function startFFmpeg() {
   const outputFilePath = path.join(streamDir, "output.m3u8");
   ffmpeg = spawn("ffmpeg", [
-    "-f",
-    "image2pipe",
-    "-vcodec",
-    "mjpeg",
-    "-pix_fmt",
-    "yuv420p",
-    "-s",
-    "320x240",
-    "-r",
-    "5",
-    "-i",
-    "-",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "ultrafast",
-    "-tune",
-    "zerolatency",
-    "-profile:v",
-    "baseline",
-    "-level",
-    "3.1",
-    "-maxrate",
-    "3000k",
-    "-bufsize",
-    "6000k",
-    "-pix_fmt",
-    "yuv420p",
-    "-g",
-    "30",
-    "-hls_time",
-    "2",
-    "-hls_list_size",
-    "20",
-    "-hls_flags",
-    "delete_segments",
-    "-f",
-    "hls",
-    outputFilePath,
+      "-f", "image2pipe",        // 이미지 데이터를 파이프 입력으로 받음
+      "-vcodec", "mjpeg",        // 입력 비디오 코덱을 MJPEG로 설정
+      "-pix_fmt", "yuvj420p",    // 픽셀 포맷을 YUV 4:2:0으로 설정 (JPEG는 yuvj420p)
+      "-s", "1280x720",          // 해상도를 1280x720으로 설정 (더 나은 화질을 위해)
+      "-r", "4",                // 프레임 레이트를 30fps로 설정
+      "-i", "-",                 // 입력을 파이프로 받음
+      "-c:v", "libx264",         // 출력 비디오 코덱을 H.264로 설정
+      "-preset", "ultrafast",    // 인코딩 속도 우선의 설정
+      "-tune", "zerolatency",    // 지연 시간을 최소화하기 위한 튜닝
+      "-profile:v", "baseline",  // H.264 프로파일을 baseline으로 설정 (호환성)
+      "-level", "3.1",           // H.264 레벨을 3.1로 설정
+      "-maxrate", "3000k",       // 최대 비트레이트를 3000kbps로 설정
+      "-bufsize", "6000k",       // 버퍼 크기를 6000kbps로 설정
+      "-pix_fmt", "yuv420p",     // 출력 픽셀 포맷을 YUV 4:2:0으로 설정
+      "-g", "30",                // GOP 크기를 60으로 설정 (두 번째 키프레임 간의 프레임 수)
+      "-hls_time", "2",          // HLS 세그먼트 길이를 2초로 설정
+      "-hls_list_size", "20",    // HLS 목록 크기를 20으로 설정
+      "-hls_flags", "delete_segments",  // 이전 HLS 세그먼트를 삭제하여 디스크 공간을 절약
+      "-f", "hls",               // 출력 포맷을 HLS로 설정
+      outputFilePath             // 출력 파일 경로
   ]);
 
   ffmpeg.stderr.on("data", (data) => {
@@ -142,20 +123,32 @@ io.on("connection", (socket) => {
   });
 
   socket.on("stream_image", async (imageBase64) => {
-    if (imageBase64) {
-      try {
-        // 카메라에서 전송된 이미지를 모델 서버로 계속해서 전송
-        const response = await axios.post("http://localhost:5003/process_image", {
-          image: imageBase64,
-        });
-        console.log("Image processed successfully");
-      } catch (error) {
-        console.error("Error processing image:", error);
+    try {
+      // 이미지를 처리하기 위해 다른 서버로 전송
+      const response = await axios.post("http://localhost:5003/process_image", {
+        image: imageBase64,
+      });
+
+      let buffer;
+      if (response.data.image) {
+        // 처리된 이미지의 Base64 데이터를 받아 디코딩
+        const processedImageBase64 = response.data.image;
+        buffer = Buffer.from(processedImageBase64, "base64");
+      } else {
+        // 얼굴이 탐지되지 않았으면 원본 이미지를 그대로 사용
+        buffer = Buffer.from(imageBase64, "base64");
+        console.log("얼굴이 탐지되지 않아 원본 이미지를 사용합니다.");
       }
-    } else {
-      console.error("No image available to process");
+
+      // 디코딩된 이미지를 FFmpeg로 전송
+      if (ffmpeg && ffmpeg.stdin.writable) {
+        ffmpeg.stdin.write(buffer);
+      }
+    } catch (error) {
+      console.error("Error processing image:", error);
     }
   });
+
 
   socket.on("stop_recording", () => {
     if (recording) {
@@ -168,6 +161,7 @@ io.on("connection", (socket) => {
     console.log("Client disconnected");
   });
 });
+
 
 
 

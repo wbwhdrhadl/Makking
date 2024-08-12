@@ -37,13 +37,14 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
     if (_cameras.isNotEmpty) {
-      _cameraController = CameraController(_cameras.first, ResolutionPreset.medium, enableAudio: false);
+      _cameraController = CameraController(_cameras.first, ResolutionPreset.max, enableAudio: false);
       await _cameraController!.initialize();
       setState(() {});
     } else {
       print("No cameras available");
     }
   }
+
 
   void initializeVideoPlayer() {
     String hlsUrl = "http://172.30.1.66:5001/stream/output.m3u8";
@@ -74,15 +75,18 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   Future<void> processImage(CameraImage image) async {
-    var img = await compute(convertYUV420toImage, image);
-    if (img != null && _socket != null && _socket!.connected) {
-      final resizedImg = imglib.copyResize(img, width: 640, height: 480);
-      List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
-      print("Encoded Image: ${base64Encode(Uint8List.fromList(jpg))}");
-      _socket!.emit('stream_image', base64Encode(Uint8List.fromList(jpg)));
+      var img = await compute(convertYUV420toImage, image);
+      if (img != null && _socket != null && _socket!.connected) {
+        final resizedImg = imglib.copyResize(img, width: 640, height: 480);
+        List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
+        String imageBase64 = base64Encode(Uint8List.fromList(jpg));
+
+        // 이미지를 Base64로 인코딩하여 서버로 전송
+        _socket!.emit('stream_image', imageBase64);
+      }
+      setState(() => isStreaming = false); // 스트리밍 완료 후 isStreaming 상태를 false로 설정
     }
-    setState(() => isStreaming = false); // 스트리밍 완료 후 isStreaming 상태를 false로 설정
-  }
+
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
     try {
