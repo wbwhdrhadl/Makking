@@ -84,8 +84,8 @@ async def process_image(request: Request):
         try:
             decoded_image = base64.b64decode(image_data)
             np_image = np.frombuffer(decoded_image, np.uint8)
-            rgb_image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
-            rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+            image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # 원본 데이터에도 색상 조정 적용
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to decode image: {str(e)}")
 
@@ -161,8 +161,15 @@ async def process_image(request: Request):
         )
 
     else:
+        # 얼굴이 탐지되지 않았을 때, 원본 이미지를 RGB로 변환한 후 반환
+        _, img_encoded = cv2.imencode(".jpg", rgb_image)
+        print("얼굴이 탐지되지 않았으므로 원본 이미지를 반환합니다.")
         return JSONResponse(
-            content={"message": "얼굴이 탐지되지 않았습니다."}, status_code=200  # 얼굴이 탐지되지 않아도 200 OK를 반환
+            content={
+                "message": "얼굴이 탐지되지 않았습니다.",
+                "image": base64.b64encode(img_encoded).decode("utf-8"),
+            },
+            status_code=200,
         )
 
 @app.post("/reset_cache")
