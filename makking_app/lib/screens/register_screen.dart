@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'login.dart'; // Ensure this import points to your actual login screen file
+import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
 
 class RegisterScreen extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -40,8 +41,14 @@ class RegisterScreen extends StatelessWidget {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('회원가입 성공'),
-              content: Text('${_usernameController.text}님 회원가입에 성공하였습니다'),
+              title: Text(
+                '회원가입 성공',
+                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+              ),
+              content: Text(
+                '${_usernameController.text}님 회원가입에 성공하였습니다',
+                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+              ),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -50,7 +57,7 @@ class RegisterScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => LoginScreen()),
                     );
                   },
-                  child: Text('확인'),
+                  child: Text('확인', style: GoogleFonts.doHyeon()), // Do Hyeon 폰트 적용
                 ),
               ],
             );
@@ -66,13 +73,19 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+    double buttonWidth = screenWidth * 0.6;
+    double buttonHeight = screenHeight * 0.08;
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('회원가입'),
+        title: Text('회원가입', style: GoogleFonts.doHyeon(color: Colors.white)), // Do Hyeon 폰트 적용
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, color: Colors.black),
+          icon: Icon(Icons.close, color: Colors.white),
           onPressed: () {
             Navigator.of(context).pop();
           },
@@ -84,56 +97,77 @@ class RegisterScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '회원가입',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              '계정 정보를 작성해주세요 !',
+              style: GoogleFonts.gothicA1(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ), // Do Hyeon 폰트 적용
             ),
             SizedBox(height: 16),
-            TextField(
+            _registerTextField(
               controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: '아이디',
-                border: UnderlineInputBorder(),
-              ),
+              labelText: '아이디',
             ),
             SizedBox(height: 16),
-            TextField(
+            _registerTextField(
               controller: _passwordController,
+              labelText: '비밀번호',
               obscureText: true,
-              decoration: InputDecoration(
-                labelText: '비밀번호',
-                border: UnderlineInputBorder(),
-              ),
             ),
             SizedBox(height: 16),
-            TextField(
+            _registerTextField(
               controller: _confirmPasswordController,
+              labelText: '비밀번호 확인',
               obscureText: true,
-              decoration: InputDecoration(
-                labelText: '비밀번호 확인',
-                border: UnderlineInputBorder(),
-              ),
             ),
             SizedBox(height: 16),
-            TextField(
+            _registerTextField(
               controller: _nameController,
-              decoration: InputDecoration(
-                labelText: '이름',
-                border: UnderlineInputBorder(),
-              ),
+              labelText: '이름',
             ),
             SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => _register(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromARGB(255, 129, 139, 195),
-                padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
-                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                backgroundColor: Color(0xFF54ffa7), // 네온 색상
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                textStyle: GoogleFonts.jua( // Jua 폰트 적용
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                fixedSize: Size(buttonWidth, buttonHeight),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text('회원가입'),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _registerTextField({
+    required TextEditingController controller,
+    required String labelText,
+    bool obscureText = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트 적용
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white),
+        ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF54ffa7)), // 포커스 시 네온 색상
+        ),
+      ),
+      style: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트 적용
     );
   }
 }

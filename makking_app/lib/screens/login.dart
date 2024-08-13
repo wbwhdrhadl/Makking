@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'broadcast_start_screen.dart'; // BroadcastStartScreen을 임포트
 import 'broadcast_list_screen.dart'; // BroadcastStartScreen을 임포트
 import 'register_screen.dart'; // RegisterScreen을 임포트
+import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -63,11 +64,20 @@ class LoginScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('환영합니다'),
-          content: Text('$username님 환영합니다'),
+          title: Text(
+            '환영합니다',
+            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+          ),
+          content: Text(
+            '$username님 환영합니다',
+            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+          ),
           actions: <Widget>[
             TextButton(
-              child: Text('확인'),
+              child: Text(
+                '확인',
+                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
                 Navigator.pushReplacement(
@@ -89,11 +99,20 @@ class LoginScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('알림'),
-          content: Text(message),
+          title: Text(
+            '알림',
+            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+          ),
+          content: Text(
+            message,
+            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+          ),
           actions: <Widget>[
             TextButton(
-              child: Text('확인'),
+              child: Text(
+                '확인',
+                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -106,12 +125,18 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+    double buttonWidth = screenWidth * 0.6;
+    double buttonHeight = screenHeight * 0.08;
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, color: Colors.black),
+          icon: Icon(Icons.close, color: Colors.white),
           onPressed: () {
             Navigator.of(context).pop();
           },
@@ -122,53 +147,54 @@ class LoginScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Sign In',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            SizedBox(
+              width: screenWidth * 0.5,
+              height: screenHeight * 0.4,
+              child: Image.asset(
+                'assets/logo.jpeg', // 로고 이미지 경로
+                fit: BoxFit.contain,
+              ),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Become a makking_app member!',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 32),
-            TextField(
+            SizedBox(height: screenHeight * 0.02),
+            _loginTextField(
               controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: 'Username',
-                border: UnderlineInputBorder(),
-              ),
+              labelText: '아이디',
             ),
-            SizedBox(height: 16),
-            TextField(
+            SizedBox(height: screenHeight * 0.02),
+            _loginTextField(
               controller: _passwordController,
+              labelText: '비밀번호',
               obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                border: UnderlineInputBorder(),
-              ),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: screenHeight * 0.02),
             Row(
               children: [
                 Checkbox(
                   value: true,
                   onChanged: (bool? value) {},
+                  activeColor: Colors.blue,
                 ),
-                Text('Remember Me'),
+                Text('계정 기억하기', style: GoogleFonts.doHyeon(color: Colors.white)), // Do Hyeon 폰트 적용
               ],
             ),
-            SizedBox(height: 24),
+            SizedBox(height: screenHeight * 0.02),
             ElevatedButton(
               onPressed: () => _login(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromARGB(255, 129, 139, 195),
-                padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
-                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                backgroundColor: Color(0xFF54ffa7),
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                textStyle: GoogleFonts.jua( // Jua 폰트 적용
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                fixedSize: Size(buttonWidth, buttonHeight),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Text('LOGIN'),
+              child: Text('로그인'),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: screenHeight * 0.02),
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -179,11 +205,11 @@ class LoginScreen extends StatelessWidget {
                 );
               },
               child: Text(
-                'Become a member makking-app',
-                style: TextStyle(color: Colors.grey),
+                '아직 회원이 아니신가요?',
+                style: GoogleFonts.doHyeon(color: Colors.grey), // Do Hyeon 폰트 적용
               ),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: screenHeight * 0.02),
             Row(
               children: [
                 Expanded(
@@ -206,6 +232,28 @@ class LoginScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _loginTextField({
+    required TextEditingController controller,
+    required String labelText,
+    bool obscureText = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트 적용
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white),
+        ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF54ffa7)),
+        ),
+      ),
+      style: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트 적용
     );
   }
 }
