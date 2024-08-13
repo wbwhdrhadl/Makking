@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'broadcast_screen.dart';
+import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
 
 class FaceRecognitionScreen extends StatefulWidget {
   final String title;
@@ -44,7 +45,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://172.30.1.66:5001/uploadFile'); // Express 서버 주소
+    final uri = Uri.parse('http://localhost:5001/uploadFile'); // Express 서버 주소
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
         'attachment',
@@ -73,7 +74,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   }
 
   Future<void> generateSignedUrl(String imageUrl) async {
-    final uri = Uri.parse('http://172.30.1.66:5001/generateSignedUrl'); // 서명된 URL 생성 엔드포인트
+    final uri = Uri.parse('http://localhost:5001/generateSignedUrl'); // 서명된 URL 생성 엔드포인트
     try {
       final response = await http.post(
         uri,
@@ -95,7 +96,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   }
 
   Future<void> sendBroadcastDataToServer(String signedUrl) async {
-    final uri = Uri.parse('http://172.30.1.66:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
+    final uri = Uri.parse('http://localhost:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
     try {
       final response = await http.post(
         uri,
@@ -142,7 +143,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
 
   // 서명된 URL을 Node.js 서버로 전송하는 함수
   Future<void> sendSignedUrlToNodeServer(String signedUrl) async {
-    final nodeServerUri = Uri.parse('http://172.30.1.66:5001/sendSignedUrl'); // Node.js 서버 엔드포인트
+    final nodeServerUri = Uri.parse('http://localhost:5001/sendSignedUrl'); // Node.js 서버 엔드포인트
 
     try {
       final response = await http.post(
@@ -161,19 +162,26 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
     }
   }
 
-
-
   void showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('오류'),
-          content: Text(message),
+          title: Text(
+            '오류',
+            style: GoogleFonts.doHyeon(),
+          ),
+          content: Text(
+            message,
+            style: GoogleFonts.doHyeon(),
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('확인'),
+              child: Text(
+                '확인',
+                style: GoogleFonts.doHyeon(),
+              ),
             ),
           ],
         );
@@ -184,40 +192,97 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(
+          widget.title,
+          style: GoogleFonts.jua(color: Colors.white),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Center(
             child: SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth:
-                      constraints.maxWidth > 600 ? 600 : constraints.maxWidth,
+                  maxWidth: constraints.maxWidth > 600 ? 600 : constraints.maxWidth,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.face, size: constraints.maxWidth * 0.3),
+                    Icon(
+                      Icons.face,
+                      size: constraints.maxWidth * 0.3,
+                      color: Colors.white,
+                    ),
                     SizedBox(height: 20),
                     imageBytes == null
-                        ? Text('이미지를 선택해 주세요.', textAlign: TextAlign.center)
-                        : Image.memory(imageBytes!),
+                        ? Text(
+                            '이미지를 선택해 주세요.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.doHyeon(color: Colors.white),
+                          )
+                        : Container(
+                            height: 250, // 높이를 줄여서 이미지가 더 잘 보이도록
+                            width: constraints.maxWidth * 0.8, // 가로 크기를 줄임
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: MemoryImage(imageBytes!),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
                     SizedBox(height: 20),
                     Text(
-                      '방송을 하기 위해서는 얼굴인식이 필요합니다. 정면으로 나온 얼굴 사진 한장을 업로드해주세요.',
+                      imageBytes == null
+                          ? '방송을 하기 위해서는 얼굴인식이 필요합니다. 정면으로 나온 얼굴 사진 한장을 업로드해주세요.'
+                          : '',
                       textAlign: TextAlign.center,
+                      style: GoogleFonts.doHyeon(color: Colors.white),
                     ),
                     SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: pickImage,
-                      child: Text('찾기'),
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: pickImage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF749BC2),
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // 가로 길이 줄임
+                          textStyle: GoogleFonts.gothicA1(
+                            fontSize: 18, // 글씨 크기 조금 줄임
+                            fontWeight: FontWeight.bold,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text('이미지 선택'),
+                      ),
                     ),
                     SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: isLoading ? null : uploadImage,
-                      child:
-                          isLoading ? CircularProgressIndicator() : Text('다음'),
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : uploadImage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF749BC2),
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // 가로 길이 줄임
+                          textStyle: GoogleFonts.gothicA1(
+                            fontSize: 18, // 글씨 크기 조금 줄임
+                            fontWeight: FontWeight.bold,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: isLoading
+                            ? CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              )
+                            : Text('다음'),
+                      ),
                     ),
                   ],
                 ),

@@ -2,6 +2,47 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const multer = require("multer"); // Multer 패키지 추가
+const fs = require('fs');
+const path = require('path');
+
+// uploads 디렉터리 확인 및 생성
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// Multer 설정
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // 파일이 저장될 경로
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname); // 파일 이름 설정
+  }
+});
+
+// 파일 필터링: 이미지만 허용
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = fileTypes.test(file.mimetype) || file.mimetype === 'application/octet-stream';
+
+    console.log('File Original Name:', file.originalname);
+    console.log('File MIME Type:', file.mimetype);
+    console.log('File Extension Name:', extname);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images are allowed!'));
+    }
+  }
+});
+
+
 
 // MongoDB User Schema 및 Model 정의
 const UserSchema = new mongoose.Schema({
@@ -18,6 +59,9 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  profileImage: {
+    type: String, // 프로필 이미지 경로
+  },
 });
 
 // 비밀번호 해싱
@@ -31,8 +75,10 @@ UserSchema.pre("save", async function (next) {
 const User = mongoose.model("User", UserSchema, "user-login");
 
 // 회원가입 API
-router.post("/register", async (req, res) => {
+router.post("/register", upload.single('profileImage'), async (req, res) => {
   const { username, password, name } = req.body;
+  const profileImage = req.file ? req.file.path : null;
+
   try {
     console.log("Received register request:", req.body);
     let user = await User.findOne({ username });
@@ -40,7 +86,7 @@ router.post("/register", async (req, res) => {
       console.log("Username already exists");
       return res.status(400).json({ msg: "Username already exists" });
     }
-    user = new User({ username, password, name });
+    user = new User({ username, password, name, profileImage });
     await user.save();
     console.log("User registered successfully");
     res.status(201).json({ msg: "User registered successfully" });
@@ -65,7 +111,7 @@ router.post("/login", async (req, res) => {
     }
 
     req.session.user = {
-      id: username, // 기존 코드를 유지
+      id: username,
       pw: password,
       authorized: true,
     };
@@ -87,31 +133,32 @@ router.post("/login", async (req, res) => {
 });
 
 
-router.get("/logout", async (req, res) => {
-  console.log("로그아웃을 하면 다시 로그인 후 이용하여야합니다.");
-
-  if(req.session.user) {
-    console.log("로그아웃중입니다.")
-    req.session.destroy((err) => {
-      if(err) {
-        console.log("세션 삭제시에 에러가 발생하였습니다.");
-        return err;
+router.get('/user/:userId', async (req, res) => {
+  try {
+      const userId = req.params.userId;
+      console.log(`Fetching user with ID: ${userId}`);
+      
+      const user = await User.findById(userId);
+      
+      if (!user) {
+          console.log('User not found');
+          return res.status(404).json({ msg: 'User not found' });
       }
-      console.log("세션이 삭제되었습니다.");
 
-    })
+      console.log('User found:', user);
+      
+      res.json({
+          username: user.username,
+          image_url: user.profileImage,
+      });
+  } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ msg: 'Server error' });
   }
-  else {
-    console.log("비회원 이용중입니다.")
-  }
-})
+});
 
-router.get("/session", async (req, res) => {
-  console.log("cookie입니다.")
-  console.log(req.session.cookie)
-  console.log("user입니다.")
-  console.log(req.session.user)
-  
-})
+
+// 정적 파일 제공을 위한 경로 설정
+router.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 module.exports = router;

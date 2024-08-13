@@ -12,116 +12,145 @@ class LoginScreen extends StatelessWidget {
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> _login(BuildContext context) async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://172.30.1.66:5001/login'), // Server URL
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, String>{
-          'username': _usernameController.text,
-          'password': _passwordController.text,
-        }),
-      );
+  try {
+    final response = await http.post(
+      Uri.parse('http://localhost:5001/login'), // Server URL
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'username': _usernameController.text,
+        'password': _passwordController.text,
+      }),
+    );
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
-        // Safely extract userId, handling the case where it might be missing or null
-        final String? userId = data['userId'] as String?;
+      // Safely extract userId, handling the case where it might be missing or null
+      final String? userId = data['userId'] as String?;
 
-        if (userId != null) {
-          print('Login successful: ${data['msg']}');
-          await _saveSessionData(userId, _usernameController.text, _passwordController.text);
+      if (userId != null) {
+        print('Login successful: ${data['msg']}');
+
+        // 서버에서 사용자 정보 가져오기
+        final userInfoResponse = await http.get(
+          Uri.parse('http://localhost:5001/user/$userId'),
+        );
+
+        if (userInfoResponse.statusCode == 200) {
+          final userInfo = jsonDecode(userInfoResponse.body);
+          final String? imageUrl = userInfo['image_url'];
+
+          // 사용자 정보 및 프로필 이미지 URL 저장
+          await _saveSessionData(userId, _usernameController.text, _passwordController.text, imageUrl);
           _showWelcomeDialog(context, _usernameController.text, userId);
         } else {
-          // Handle the case where userId is not present or is null
-          print('Login failed: userId is missing or null');
-          _showDialog(context, 'Login failed: userId is missing or null.');
+          print('Failed to load user information.');
+          _showDialog(context, 'Failed to load user information.');
         }
       } else {
-        print('Login failed: ${response.body}');
-        _showDialog(context, 'Login failed: ${response.body}');
+        // Handle the case where userId is not present or is null
+        print('Login failed: userId is missing or null');
+        _showDialog(context, 'Login failed: userId is missing or null.');
       }
-    } catch (e) {
-      print('Connection failed: $e');
-      _showDialog(context, 'Server connection failed.');
+    } else {
+      print('Login failed: ${response.body}');
+      _showDialog(context, 'Login failed: ${response.body}');
     }
+  } catch (e) {
+    print('Connection failed: $e');
+    _showDialog(context, 'Server connection failed.');
   }
+}
 
-  Future<void> _saveSessionData(String userId, String username, String password) async {
+  Future<void> _saveSessionData(String userId, String username, String password, String? imageUrl) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('userId', userId); // userId 저장
     await prefs.setString('username', username);
     await prefs.setString('password', password);
+
+    if (imageUrl != null) {
+    await prefs.setString('profileImageUrl', imageUrl);
+  }
   }
 
   void _showWelcomeDialog(BuildContext context, String username, String userId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            '환영합니다',
-            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-          ),
-          content: Text(
-            '$username님 환영합니다',
-            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                '확인',
-                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BroadcastListScreen(userId: userId), // BroadcastStartScreen으로 userId 전달
-                  ),
-                );
-              },
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: Colors.black, // 팝업창 배경색을 검정색으로 설정
+        title: Text(
+          '환영합니다',
+          style: GoogleFonts.doHyeon(color: Color(0xFF54ffa7)), // Do Hyeon 폰트와 네온 색상 적용
+        ),
+        content: Text(
+          '$username님 환영합니다',
+          style: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트와 흰색 텍스트 적용
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text(
+              '확인',
+              style: GoogleFonts.doHyeon(color: Color(0xFF54ffa7)), // Do Hyeon 폰트와 네온 색상 적용
             ),
-          ],
-        );
-      },
-    );
-  }
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BroadcastListScreen(userId: userId), // BroadcastListScreen으로 userId 전달
+                ),
+              );
+            },
+          ),
+        ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12), // 팝업창 모서리를 둥글게 설정
+          side: BorderSide(color: Color(0xFF54ffa7), width: 2), // 네온 색상으로 경계선 설정
+        ),
+      );
+    },
+  );
+}
 
-  void _showDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            '알림',
-            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-          ),
-          content: Text(
-            message,
-            style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                '확인',
-                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+void _showDialog(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: Colors.black, // 팝업창 배경색을 검정색으로 설정
+        title: Text(
+          '알림',
+          style: GoogleFonts.doHyeon(color: Color(0xFF54ffa7)), // Do Hyeon 폰트와 네온 색상 적용
+        ),
+        content: Text(
+          message,
+          style: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트와 흰색 텍스트 적용
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text(
+              '확인',
+              style: GoogleFonts.doHyeon(color: Color(0xFF54ffa7)), // Do Hyeon 폰트와 네온 색상 적용
             ),
-          ],
-        );
-      },
-    );
-  }
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12), // 팝업창 모서리를 둥글게 설정
+          side: BorderSide(color: Color(0xFF54ffa7), width: 2), // 네온 색상으로 경계선 설정
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -200,8 +229,8 @@ class LoginScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          RegisterScreen()), // RegisterScreen으로 이동
+                    builder: (context) => RegisterScreen(), // RegisterScreen으로 이동
+                  ),
                 );
               },
               child: Text(

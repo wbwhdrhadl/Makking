@@ -3,13 +3,54 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'login.dart'; // Ensure this import points to your actual login screen file
 import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
+import 'dart:io' as io;
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data'; // ByteData를 위해 추가
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html; // 웹 관련 기능을 사용하기 위해 dart:html 패키지 임포트
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
+  @override
+  _RegisterScreenState createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  io.File? _profileImage; // 모바일에서 사용될 File
+  Uint8List? _webProfileImageBytes; // 웹에서 사용될 이미지의 바이트 데이터를 저장
+
+  Future<void> _pickImage() async {
+    if (kIsWeb) {
+      // 웹에서 이미지 선택
+      final html.FileUploadInputElement uploadInput = html.FileUploadInputElement();
+      uploadInput.accept = 'image/*';
+      uploadInput.click();
+
+      uploadInput.onChange.listen((event) {
+        final files = uploadInput.files;
+        if (files != null && files.isNotEmpty) {
+          final reader = html.FileReader();
+          reader.readAsArrayBuffer(files[0]);
+          reader.onLoadEnd.listen((event) {
+            setState(() {
+              _webProfileImageBytes = reader.result as Uint8List?;
+            });
+          });
+        }
+      });
+    } else {
+      // 모바일에서 이미지 선택
+      final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _profileImage = io.File(pickedFile.path);
+        });
+      }
+    }
+  }
 
   Future<void> _register(BuildContext context) async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -18,37 +59,40 @@ class RegisterScreen extends StatelessWidget {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('http://172.30.1.66:5001/register'), // Use localhost for macOS
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, String>{
-          'username': _usernameController.text,
-          'password': _passwordController.text,
-          'name': _nameController.text,
-        }),
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://localhost:5001/register'),
       );
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      request.fields['username'] = _usernameController.text;
+      request.fields['password'] = _passwordController.text;
+      request.fields['name'] = _nameController.text;
+
+      if (kIsWeb) {
+        if (_webProfileImageBytes != null) {
+          request.files.add(http.MultipartFile.fromBytes(
+            'profileImage',
+            _webProfileImageBytes!,
+            filename: 'profile_image.png',
+          ));
+        }
+      } else {
+        if (_profileImage != null) {
+          request.files.add(await http.MultipartFile.fromPath('profileImage', _profileImage!.path));
+        }
+      }
+
+      var response = await request.send();
 
       if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        print('Registration successful: ${data['msg']}');
-
+        print('Registration successful');
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text(
-                '회원가입 성공',
-                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-              ),
-              content: Text(
-                '${_usernameController.text}님 회원가입에 성공하였습니다',
-                style: GoogleFonts.doHyeon(), // Do Hyeon 폰트 적용
-              ),
+              backgroundColor: Colors.black,
+              title: Text('회원가입 성공', style: GoogleFonts.doHyeon(color: Color(0xFF54ffa7))),
+              content: Text('${_usernameController.text}님 회원가입에 성공하였습니다', style: GoogleFonts.doHyeon(color: Colors.white)),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -57,14 +101,18 @@ class RegisterScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => LoginScreen()),
                     );
                   },
-                  child: Text('확인', style: GoogleFonts.doHyeon()), // Do Hyeon 폰트 적용
+                  child: Text('확인', style: GoogleFonts.doHyeon(color: Color(0xFF54ffa7))),
                 ),
               ],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Color(0xFF54ffa7), width: 2),
+              ),
             );
           },
         );
       } else {
-        print('Registration failed: ${response.body}');
+        print('Registration failed: ${response.reasonPhrase}');
       }
     } catch (e) {
       print('Connection failed: $e');
@@ -81,7 +129,7 @@ class RegisterScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('회원가입', style: GoogleFonts.doHyeon(color: Colors.white)), // Do Hyeon 폰트 적용
+        title: Text('회원가입', style: GoogleFonts.doHyeon(color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -96,13 +144,16 @@ class RegisterScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              '계정 정보를 작성해주세요 !',
-              style: GoogleFonts.gothicA1(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ), // Do Hyeon 폰트 적용
+            GestureDetector(
+              onTap: _pickImage,
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.grey,
+                backgroundImage: _getImageProvider(),
+                child: _profileImage == null && _webProfileImageBytes == null
+                    ? Icon(Icons.camera_alt, color: Colors.white, size: 50)
+                    : null,
+              ),
             ),
             SizedBox(height: 16),
             _registerTextField(
@@ -130,12 +181,9 @@ class RegisterScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () => _register(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF54ffa7), // 네온 색상
+                backgroundColor: Color(0xFF54ffa7),
                 padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                textStyle: GoogleFonts.jua( // Jua 폰트 적용
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                textStyle: GoogleFonts.jua(fontSize: 22, fontWeight: FontWeight.bold),
                 fixedSize: Size(buttonWidth, buttonHeight),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -149,6 +197,15 @@ class RegisterScreen extends StatelessWidget {
     );
   }
 
+  ImageProvider<Object>? _getImageProvider() {
+    if (kIsWeb && _webProfileImageBytes != null) {
+      return MemoryImage(_webProfileImageBytes!);
+    } else if (!kIsWeb && _profileImage != null) {
+      return FileImage(_profileImage!);
+    }
+    return null;
+  }
+
   Widget _registerTextField({
     required TextEditingController controller,
     required String labelText,
@@ -159,15 +216,15 @@ class RegisterScreen extends StatelessWidget {
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: labelText,
-        labelStyle: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트 적용
+        labelStyle: GoogleFonts.doHyeon(color: Colors.white),
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.white),
         ),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF54ffa7)), // 포커스 시 네온 색상
+          borderSide: BorderSide(color: Color(0xFF54ffa7)),
         ),
       ),
-      style: GoogleFonts.doHyeon(color: Colors.white), // Do Hyeon 폰트 적용
+      style: GoogleFonts.doHyeon(color: Colors.white),
     );
   }
 }
