@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'broadcast_list_screen.dart';
 import 'login.dart'; // login.dart 파일을 import 합니다.
+import 'package:google_fonts/google_fonts.dart';
+
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -19,11 +21,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       body: LayoutBuilder(
         builder: (context, constraints) {
           double screenWidth = constraints.maxWidth;
           double screenHeight = constraints.maxHeight;
+          double buttonWidth = screenWidth * 0.6;
+          double buttonHeight = screenHeight * 0.08;
 
           return Center(
             child: Column(
@@ -40,15 +44,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(height: screenHeight * 0.02),
                 _loginButton(
                   imagePath: 'assets/kakao_login.jpeg',
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
+                  buttonWidth: buttonWidth,
+                  buttonHeight: buttonHeight,
                   onPressed: () => _loginWithKakaoTalk(context),
                 ),
                 SizedBox(height: screenHeight * 0.02),
                 _loginButton(
                   imagePath: 'assets/naver_login.jpeg',
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
+                  buttonWidth: buttonWidth,
+                  buttonHeight: buttonHeight,
                   onPressed: _loginWithNaver,
                 ),
                 SizedBox(height: screenHeight * 0.02),
@@ -62,16 +66,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: Color(0xFF9e9e9e),
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                    textStyle: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    textStyle: GoogleFonts.jua(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 20,
                     ),
-                    fixedSize: Size(screenWidth * 0.6, screenHeight * 0.08),
+                    fixedSize: Size(buttonWidth, buttonHeight),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(0),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: Text('회원으로 로그인하기'),
@@ -84,17 +88,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _loginButton(
-      {required String imagePath,
-      required double screenWidth,
-      required double screenHeight,
-      required Function() onPressed}) {
+  Widget _loginButton({
+    required String imagePath,
+    required double buttonWidth,
+    required double buttonHeight,
+    required Function() onPressed,
+  }) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
       child: Ink(
@@ -103,11 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
             image: AssetImage(imagePath),
             fit: BoxFit.cover,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Container(
-          width: screenWidth * 0.6,
-          height: screenHeight * 0.08,
+          width: buttonWidth,
+          height: buttonHeight,
         ),
       ),
     );

@@ -50,6 +50,7 @@ dependencies:
   flutter_sound: any
   permission_handler: any
   path_provider: ^2.0.11
+  google_fonts: ^4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -74,7 +75,6 @@ flutter:
   assets:
     - assets/icons/makking_tv_broadcast_icon.jpeg
     - assets/kakao_login.jpeg
-    - assets/logo.jpeg
     - assets/naver_login.jpeg
     - assets/img1.jpeg
     - assets/img2.jpeg
@@ -83,6 +83,10 @@ flutter:
     - assets/ayuni.jpeg
     - assets/daeun.jpeg
     - assets/video1.mp4
+    - assets/dot.png
+    - assets/m_letter.png
+    - assets/akking.png
+    - assets/logo.jpeg
 
 
   # To add assets to your application, add an assets section, like this:
