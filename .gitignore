@@ -55,3 +55,5 @@ myenv/
 /makking_app/linux
 /makking_app/linux/flutter
 makking_app/pubspec.lock
+.env
+

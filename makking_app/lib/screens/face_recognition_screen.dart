@@ -11,12 +11,14 @@ class FaceRecognitionScreen extends StatefulWidget {
   final String userId;
   final bool isMosaicEnabled;
   final bool isSubtitleEnabled;
+  final String serverIp; // serverIp 추가
 
   FaceRecognitionScreen({
     required this.title,
     required this.userId,
     required this.isMosaicEnabled,
     required this.isSubtitleEnabled,
+    required this.serverIp, // serverIp 추가
   });
 
   @override
@@ -45,7 +47,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://localhost:5001/uploadFile'); // Express 서버 주소
+    final uri = Uri.parse('http://${widget.serverIp}:5001/uploadFile'); // serverIp 사용
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
         'attachment',
@@ -74,7 +76,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   }
 
   Future<void> generateSignedUrl(String imageUrl) async {
-    final uri = Uri.parse('http://localhost:5001/generateSignedUrl'); // 서명된 URL 생성 엔드포인트
+    final uri = Uri.parse('http://${widget.serverIp}:5001/generateSignedUrl'); // serverIp 사용
     try {
       final response = await http.post(
         uri,
@@ -96,7 +98,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   }
 
   Future<void> sendBroadcastDataToServer(String signedUrl) async {
-    final uri = Uri.parse('http://localhost:5001/broadcast/Setting'); // 백엔드 API 엔드포인트
+    final uri = Uri.parse('http://${widget.serverIp}:5001/broadcast/Setting'); // serverIp 사용
     try {
       final response = await http.post(
         uri,
@@ -143,7 +145,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
 
   // 서명된 URL을 Node.js 서버로 전송하는 함수
   Future<void> sendSignedUrlToNodeServer(String signedUrl) async {
-    final nodeServerUri = Uri.parse('http://localhost:5001/sendSignedUrl'); // Node.js 서버 엔드포인트
+    final nodeServerUri = Uri.parse('http://${widget.serverIp}:5001/sendSignedUrl'); // serverIp 사용
 
     try {
       final response = await http.post(
@@ -239,7 +241,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                     SizedBox(height: 20),
                     Text(
                       imageBytes == null
-                          ? '방송을 하기 위해서는 얼굴인식이 필요합니다. 정면으로 나온 얼굴 사진 한장을 업로드해주세요.'
+                          ? '방송을 하기 위해서는 얼굴인식이 필요합니다.\n정면으로 나온 얼굴 사진 한장을 업로드해주세요.'
                           : '',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.doHyeon(color: Colors.white),
@@ -250,9 +252,9 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                         onPressed: pickImage,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF749BC2),
-                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // 가로 길이 줄임
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 가로 및 세로 길이 줄임
                           textStyle: GoogleFonts.gothicA1(
-                            fontSize: 18, // 글씨 크기 조금 줄임
+                            fontSize: 13, // 글씨 크기 줄임
                             fontWeight: FontWeight.bold,
                           ),
                           shape: RoundedRectangleBorder(
@@ -268,9 +270,9 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                         onPressed: isLoading ? null : uploadImage,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF749BC2),
-                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // 가로 길이 줄임
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 가로 및 세로 길이 줄임
                           textStyle: GoogleFonts.gothicA1(
-                            fontSize: 18, // 글씨 크기 조금 줄임
+                            fontSize: 13, // 글씨 크기 줄임
                             fontWeight: FontWeight.bold,
                           ),
                           shape: RoundedRectangleBorder(

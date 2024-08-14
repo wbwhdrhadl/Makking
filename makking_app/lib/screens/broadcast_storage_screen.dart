@@ -3,16 +3,17 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'face_recognition_screen.dart';
 import 'broadcast_screen.dart';
-import 'myaccout_screen.dart';
+import 'account_settings_screen.dart';
 import 'broad1.dart';
 import 'broad_reshow.dart';
 import 'broadcast_list_screen.dart';
 import 'broadcast_storage_screen.dart';
 
 class BroadcastStorageScreen extends StatelessWidget {
-  final String userId; // userId 필드 추가
+  final String userId;
+  final String serverIp; // serverIp 필드 추가
 
-  BroadcastStorageScreen({required this.userId}); // userId를 생성자에서 받아옴
+  BroadcastStorageScreen({required this.userId, required this.serverIp}); // serverIp 추가
 
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
@@ -22,12 +23,13 @@ class BroadcastStorageScreen extends StatelessWidget {
       viewers: 56880,
       thumbnail: 'assets/ayuni.jpeg',
       broadcastName: '아융이와다은이',
-      onTap: (BuildContext context, String userId) {
+      userId: 'exampleUserId',
+      serverIp: '192.168.1.115',
+      onTap: (BuildContext context, String userId, String serverIp) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                BroadReshow(broadcastName: 'example', userId: userId),
+            builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
           ),
         );
       },
@@ -46,8 +48,7 @@ class BroadcastStorageScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      BroadReshow(broadcastName: 'example', userId: userId),
+                  builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
                 ),
               );
             },
@@ -60,9 +61,10 @@ class BroadcastStorageScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => FaceRecognitionScreen(
                     title: '얼굴 인식 화면',
-                    userId: userId, // userId 전달
-                    isMosaicEnabled: false, // 예시 값 설정
-                    isSubtitleEnabled: false, // 예시 값 설정
+                    userId: userId,
+                    isMosaicEnabled: false,
+                    isSubtitleEnabled: false,
+                    serverIp: serverIp, // serverIp 추가
                   ),
                 ),
               );
@@ -73,8 +75,11 @@ class BroadcastStorageScreen extends StatelessWidget {
             onPressed: () {
               showSearch(
                 context: context,
-                delegate:
-                    CustomSearchDelegate(broadcastList: broadcastList, userId: userId),
+                delegate: CustomSearchDelegate(
+                  broadcastList: broadcastList,
+                  userId: userId,
+                  serverIp: serverIp, // serverIp 추가
+                ),
               );
             },
           ),
@@ -83,7 +88,7 @@ class BroadcastStorageScreen extends StatelessWidget {
       body: ListView(
         children: broadcastList
             .map((broadcast) => InkWell(
-                  onTap: () => broadcast.onTap(context, userId),
+                  onTap: () => broadcast.onTap(context, userId, serverIp), // serverIp 전달
                   child: broadcast,
                 ))
             .toList(),
@@ -98,8 +103,7 @@ class BroadcastStorageScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        BroadReshow(broadcastName: 'example', userId: userId),
+                    builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
                   ),
                 );
               },
@@ -110,8 +114,7 @@ class BroadcastStorageScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        BroadReshow(broadcastName: 'example', userId: userId),
+                    builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
                   ),
                 );
               },
@@ -121,8 +124,11 @@ class BroadcastStorageScreen extends StatelessWidget {
               onPressed: () {
                 showSearch(
                   context: context,
-                  delegate:
-                      CustomSearchDelegate(broadcastList: broadcastList, userId: userId),
+                  delegate: CustomSearchDelegate(
+                    broadcastList: broadcastList,
+                    userId: userId,
+                    serverIp: serverIp, // serverIp 추가
+                  ),
                 );
               },
             ),
@@ -132,8 +138,10 @@ class BroadcastStorageScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        AccountSettingsScreen(userId: userId), // userId 전달
+                    builder: (context) => AccountSettingsScreen(
+                      userId: userId,
+                      serverIp: serverIp, // serverIp 추가
+                    ),
                   ),
                 );
               },
@@ -152,7 +160,9 @@ class LiveStreamTile extends StatefulWidget {
   final int viewers;
   final String thumbnail;
   final String broadcastName;
-  final Function(BuildContext, String) onTap;
+  final String userId;
+  final String serverIp;
+  final Function(BuildContext, String, String) onTap; // serverIp 추가
 
   LiveStreamTile({
     required this.profileImage,
@@ -161,6 +171,8 @@ class LiveStreamTile extends StatefulWidget {
     required this.viewers,
     required this.thumbnail,
     required this.broadcastName,
+    required this.userId,
+    required this.serverIp,
     required this.onTap,
   });
 
@@ -180,8 +192,8 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
 
   Future<void> fetchData() async {
     try {
-      var response = await http.get(
-          Uri.parse('http://localhost:5001/messages/${widget.broadcastName}'));
+      var response = await http.get(Uri.parse(
+          'http://${widget.serverIp}:5001/messages/${widget.broadcastName}'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
@@ -199,7 +211,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   void incrementLikes() async {
     try {
       var response = await http.post(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}/like'));
+          'http://${widget.serverIp}:5001/messages/${widget.broadcastName}/like'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
@@ -216,7 +228,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   void incrementViewers() async {
     try {
       var response = await http.post(Uri.parse(
-          'http://localhost:5001/messages/${widget.broadcastName}/viewers'));
+          'http://${widget.serverIp}:5001/messages/${widget.broadcastName}/viewers'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
@@ -241,7 +253,7 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
       child: InkWell(
         onTap: () {
           incrementViewers();
-          widget.onTap(context, widget.broadcastName);
+          widget.onTap(context, widget.userId, widget.serverIp); // serverIp 전달
         },
         child: Row(
           children: [
@@ -315,8 +327,9 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
 class CustomSearchDelegate extends SearchDelegate {
   final List<LiveStreamTile> broadcastList;
   final String userId;
+  final String serverIp; // serverIp 필드 추가
 
-  CustomSearchDelegate({required this.broadcastList, required this.userId});
+  CustomSearchDelegate({required this.broadcastList, required this.userId, required this.serverIp}); // serverIp 추가
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -357,6 +370,7 @@ class CustomSearchDelegate extends SearchDelegate {
                 builder: (context) => BroadReshow(
                   broadcastName: broadcast.broadcastName,
                   userId: userId,
+                  serverIp: serverIp, // serverIp 전달
                 ),
               ),
             );

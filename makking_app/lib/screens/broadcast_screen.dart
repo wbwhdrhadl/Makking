@@ -37,7 +37,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
     if (_cameras.isNotEmpty) {
-      _cameraController = CameraController(_cameras.first, ResolutionPreset.max, enableAudio: false);
+      _cameraController = CameraController(_cameras.first, ResolutionPreset.max, enableAudio: true);
       await _cameraController!.initialize();
       setState(() {});
     } else {

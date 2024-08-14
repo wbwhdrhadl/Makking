@@ -38,6 +38,7 @@ router.post('/broadcast/Setting', upload.single('thumbnail'), async (req, res) =
       is_mosaic_enabled,
       is_subtitle_enabled,
       thumbnail_url, // 썸네일 이미지 URL 저장
+      image_url,
     });
 
     await newBroadcast.save();

@@ -1,46 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert'; // For JSON processing
-import 'package:makking_app/screens/broadcast_start_screen.dart';
-import 'package:path/path.dart';
-
-// Placeholder Widgets - Make sure to implement or correct these based on your actual files
+import 'broadcast_start_screen.dart';
 import 'face_recognition_screen.dart';
-import 'broadcast_screen.dart';
-import 'myaccout_screen.dart';
 import 'broad1.dart';
 import 'broadcast_storage_screen.dart';
-
-import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Broadcasting Platform',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
-        textTheme: TextTheme(
-          titleLarge: GoogleFonts.doHyeon(fontSize: 18, color: Colors.white), // headline6을 titleLarge로 변경
-          bodyLarge: GoogleFonts.doHyeon(fontSize: 16, color: Colors.white),
-          bodyMedium: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white),
-        ),
-      ),
-      home: BroadcastListScreen(userId: 'exampleUserId'), // 예시로 userId 전달
-    );
-  }
-}
+import 'package:google_fonts/google_fonts.dart';
+import 'broadcast_storage_screen.dart';
+import 'account_settings_screen.dart';
 
 class BroadcastListScreen extends StatelessWidget {
-  final String userId; // userId 필드 추가
+  final String userId;
+  final String serverIp;
 
-  BroadcastListScreen({required this.userId}); // userId를 생성자에서 받아옴
+  BroadcastListScreen({required this.userId, required this.serverIp});
 
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
@@ -50,8 +21,9 @@ class BroadcastListScreen extends StatelessWidget {
       viewers: 56880,
       thumbnail: 'assets/img2.jpeg',
       broadcastName: '와꾸대장봉준',
-      userId: 'exampleUserId', // userId 전달
-      onTap: (BuildContext context, String userId) {
+      userId: 'exampleUserId',
+      serverIp: '192.168.1.115',
+      onTap: (BuildContext context, String userId, String serverIp) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -67,8 +39,9 @@ class BroadcastListScreen extends StatelessWidget {
       viewers: 233,
       thumbnail: 'assets/img1.jpeg',
       broadcastName: '이다군이다은',
-      userId: 'exampleUserId', // userId 전달
-      onTap: (BuildContext context, String userId) {
+      userId: 'exampleUserId',
+      serverIp: '192.168.1.115',
+      onTap: (BuildContext context, String userId, String serverIp) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -91,17 +64,17 @@ class BroadcastListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BroadcastStartScreen(userId: userId), // userId 전달
+                  builder: (context) => BroadcastStartScreen(userId: userId, serverIp: serverIp),
                 ),
               );
             },
           ),
           IconButton(
-            icon: Icon(Icons.search, color: Color(0xFF00bfff)), // 네온 파랑색 적용
+            icon: Icon(Icons.search, color: Color(0xFF00bfff)),
             onPressed: () {
               showSearch(
                 context: context,
-                delegate: CustomSearchDelegate(broadcastList: broadcastList),
+                delegate: CustomSearchDelegate(broadcastList: broadcastList, userId: userId, serverIp: serverIp),
               );
             },
           ),
@@ -111,7 +84,7 @@ class BroadcastListScreen extends StatelessWidget {
       body: ListView(
         children: broadcastList
             .map((broadcast) => InkWell(
-                  onTap: () => broadcast.onTap(context, userId), // userId 전달
+                  onTap: () => broadcast.onTap(context, userId, serverIp),
                   child: broadcast,
                 ))
             .toList(),
@@ -122,38 +95,36 @@ class BroadcastListScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
-              icon: Icon(Icons.home, color: Color(0xFF00bfff)), // 네온 파랑색 적용
-              onPressed: () {
-                // Implement home navigation or refresh
-              },
+              icon: Icon(Icons.home, color: Color(0xFF00bfff)),
+              onPressed: () {},
             ),
             IconButton(
-              icon: Icon(Icons.save, color: Color(0xFF00bfff)), // 네온 파랑색 적용
+              icon: Icon(Icons.save, color: Color(0xFF00bfff)),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadcastStorageScreen(userId: userId), // userId 전달
+                    builder: (context) => BroadcastStorageScreen(userId: userId, serverIp: serverIp),
                   ),
                 );
               },
             ),
             IconButton(
-              icon: Icon(Icons.search, color: Color(0xFF00bfff)), // 네온 파랑색 적용
+              icon: Icon(Icons.search, color: Color(0xFF00bfff)),
               onPressed: () {
                 showSearch(
                   context: context,
-                  delegate: CustomSearchDelegate(broadcastList: broadcastList),
+                  delegate: CustomSearchDelegate(broadcastList: broadcastList, userId: userId, serverIp: serverIp),
                 );
               },
             ),
             IconButton(
-              icon: Icon(Icons.person, color: Color(0xFF00bfff)), // 네온 파랑색 적용
+              icon: Icon(Icons.person, color: Color(0xFF00bfff)),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AccountSettingsScreen(userId: userId), // userId 전달
+                    builder: (context) => AccountSettingsScreen(userId: userId,serverIp: serverIp),
                   ),
                 );
               },
@@ -172,8 +143,9 @@ class LiveStreamTile extends StatelessWidget {
   final int viewers;
   final String thumbnail;
   final String broadcastName;
-  final String userId; // userId 필드 추가
-  final Function(BuildContext, String) onTap; // onTap 함수 수정
+  final String userId;
+  final String serverIp;
+  final Function(BuildContext, String, String) onTap;
 
   LiveStreamTile({
     required this.profileImage,
@@ -182,17 +154,18 @@ class LiveStreamTile extends StatelessWidget {
     required this.viewers,
     required this.thumbnail,
     required this.broadcastName,
-    required this.userId, // userId 추가
+    required this.userId,
+    required this.serverIp,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.grey[850], // 카드 배경색
+      color: Colors.grey[850],
       margin: EdgeInsets.all(10),
       child: InkWell(
-        onTap: () => onTap(context, userId), // userId 전달
+        onTap: () => onTap(context, userId, serverIp),
         child: Column(
           children: [
             ListTile(
@@ -201,7 +174,7 @@ class LiveStreamTile extends StatelessWidget {
               ),
               title: Text(streamerName, style: GoogleFonts.doHyeon(fontSize: 18, color: Colors.white)),
               subtitle: Text(description, style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.grey[300])),
-              trailing: Text('🔴 $viewers viewers', style: GoogleFonts.doHyeon(fontSize: 14, color: Color(0xFF00bfff))), // 네온 파랑색 적용
+              trailing: Text('🔴 $viewers viewers', style: GoogleFonts.doHyeon(fontSize: 14, color: Color(0xFF00bfff))),
             ),
             Container(
               height: 150,
@@ -217,10 +190,10 @@ class LiveStreamTile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.thumb_up, color: Color(0xFF00bfff)), // 네온 파랑색 적용
-                    onPressed: () {}, // 좋아요 기능 구현 필요
+                    icon: Icon(Icons.thumb_up, color: Color(0xFF00bfff)),
+                    onPressed: () {},
                   ),
-                  Text('Likes', style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white)), // 좋아요 수를 보여줄 수 있음
+                  Text('Likes', style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white)),
                 ],
               ),
             ),
@@ -233,8 +206,10 @@ class LiveStreamTile extends StatelessWidget {
 
 class CustomSearchDelegate extends SearchDelegate {
   final List<LiveStreamTile> broadcastList;
+  final String userId;
+  final String serverIp;
 
-  CustomSearchDelegate({required this.broadcastList});
+  CustomSearchDelegate({required this.broadcastList, required this.userId, required this.serverIp});
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -272,8 +247,7 @@ class CustomSearchDelegate extends SearchDelegate {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    Broadcast1(broadcastName: broadcast.broadcastName),
+                builder: (context) => Broadcast1(broadcastName: broadcast.broadcastName),
               ),
             );
           },

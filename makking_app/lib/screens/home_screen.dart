@@ -7,8 +7,11 @@ import 'broadcast_list_screen.dart';
 import 'login.dart'; // login.dart 파일을 import 합니다.
 import 'package:google_fonts/google_fonts.dart';
 
-
 class HomeScreen extends StatefulWidget {
+  final String serverIp;
+
+  HomeScreen({required this.serverIp}); // serverIp를 생성자에서 받아옵니다.
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -61,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => LoginScreen(),
+                        builder: (context) => LoginScreen(serverIp: widget.serverIp), // serverIp 전달
                       ),
                     );
                   },
@@ -71,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                     textStyle: GoogleFonts.jua(
                       fontWeight: FontWeight.w400,
-                      fontSize: 20,
+                      fontSize: 13,
                     ),
                     fixedSize: Size(buttonWidth, buttonHeight),
                     shape: RoundedRectangleBorder(
@@ -171,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => BroadcastListScreen(userId: id),
+          builder: (context) => BroadcastListScreen(userId: id, serverIp: widget.serverIp),
         ),
       );
     } catch (error) {
@@ -226,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => BroadcastListScreen(userId: user.id.toString()),
+          builder: (context) => BroadcastListScreen(userId: user.id.toString(), serverIp: widget.serverIp),
         ),
       );
 

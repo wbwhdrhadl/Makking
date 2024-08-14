@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 import cv2
@@ -19,6 +20,9 @@ model = get_model("yolov5n", device=device, min_face=24)
 cached_image = None
 reference_encoding = None
 
+# 이미지 저장 경로 설정
+image_save_path = "downloaded_image.jpg"  # 이 경로는 사용자가 설정할 수 있습니다.
+
 # 라플라시안 필터를 사용하여 이미지의 고주파 성분 추출
 def extract_high_freq_features(image, size=(256, 256)):
     resized_image = cv2.resize(image, size)
@@ -35,7 +39,7 @@ def cosine_similarity_images(img1, img2, size=(256, 256)):
 
 @app.post("/process_image")
 async def process_image(request: Request):
-    global cached_image, reference_encoding
+    global cached_image, reference_encoding, image_save_path
 
     data = await request.json()
     signed_url = data.get("signedUrl")
@@ -49,7 +53,10 @@ async def process_image(request: Request):
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             cached_image = rgb_image
-            print("이미지 다운로드 및 캐시 성공")
+
+            # 다운로드 받은 이미지를 로컬에 저장
+            cv2.imwrite(image_save_path, image)
+            print(f"이미지 다운로드 및 캐시 성공, 로컬에 저장됨: {image_save_path}")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to download image: {str(e)}")
 

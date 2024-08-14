@@ -38,7 +38,10 @@ app.use("/stream", express.static(streamDir));
 
 let ffmpeg;
 let recording = false;
-let imageQueue = []; // 이미지를 저장할 큐
+let videoBuffer = []; // 비디오 데이터를 저장할 버퍼
+let audioBuffer = []; // 오디오 데이터를 저장할 버퍼
+let isVideoReady = false;
+let isAudioReady = false;
 
 function startFFmpeg() {
   const outputFilePath = path.join(streamDir, "output.m3u8");
@@ -46,10 +49,14 @@ function startFFmpeg() {
       "-f", "image2pipe",        // 이미지 데이터를 파이프 입력으로 받음
       "-vcodec", "mjpeg",        // 입력 비디오 코덱을 MJPEG로 설정
       "-pix_fmt", "yuvj420p",    // 픽셀 포맷을 YUV 4:2:0으로 설정 (JPEG는 yuvj420p)
-      "-s", "320x240",            // 해상도를 1280x720으로 설정 (더 나은 화질을 위해)
-      "-r", "3",                // 프레임 레이트를 30fps로 설정
+      "-s", "320x240",           // 해상도를 320x240으로 설정
+      "-r", "3",                 // 프레임 레이트를 3fps로 설정
       "-i", "-",                 // 입력을 파이프로 받음
+      "-f", "alsa",              // 오디오 입력을 알사(또는 다른 오디오 장치)로 설정
+      "-i", "hw:0",
       "-c:v", "libx264",         // 출력 비디오 코덱을 H.264로 설정
+      "-c:a", "aac",             // 출력 오디오 코덱을 AAC로 설정
+      "-b:a", "128k",            // 오디오 비트레이트를 128kbps로 설정
       "-preset", "ultrafast",    // 인코딩 속도 우선의 설정
       "-tune", "zerolatency",    // 지연 시간을 최소화하기 위한 튜닝
       "-profile:v", "baseline",  // H.264 프로파일을 baseline으로 설정 (호환성)
@@ -57,7 +64,7 @@ function startFFmpeg() {
       "-maxrate", "3000k",       // 최대 비트레이트를 3000kbps로 설정
       "-bufsize", "6000k",       // 버퍼 크기를 6000kbps로 설정
       "-pix_fmt", "yuv420p",     // 출력 픽셀 포맷을 YUV 4:2:0으로 설정
-      "-g", "30",                // GOP 크기를 60으로 설정 (두 번째 키프레임 간의 프레임 수)
+      "-g", "30",                // GOP 크기를 30으로 설정 (두 번째 키프레임 간의 프레임 수)
       "-hls_time", "2",          // HLS 세그먼트 길이를 2초로 설정
       "-hls_list_size", "20",    // HLS 목록 크기를 20으로 설정
       "-hls_flags", "delete_segments",  // 이전 HLS 세그먼트를 삭제하여 디스크 공간을 절약
@@ -75,16 +82,6 @@ function startFFmpeg() {
 
   recording = true;
   console.log(`Recording started: ${outputFilePath}`);
-
-  // 이미지 전송 타이머 설정
-  setInterval(() => {
-    if (imageQueue.length > 0) {
-      const image = imageQueue.shift();
-      if (ffmpeg && ffmpeg.stdin.writable) {
-        ffmpeg.stdin.write(image);
-      }
-    }
-  }, 300); // 0.3초 간격으로 이미지 전송
 }
 
 function stopFFmpeg() {
@@ -92,16 +89,32 @@ function stopFFmpeg() {
     ffmpeg.stdin.end();
     ffmpeg = null;
     recording = false;
+    videoBuffer = [];
+    audioBuffer = [];
+    isVideoReady = false;
+    isAudioReady = false;
     console.log("Recording stopped");
   }
 }
 
-let lastReceivedImage = null; // 최근 수신된 이미지 데이터를 저장할 변수
+function attemptSyncAndStream() {
+  if (isVideoReady && isAudioReady && ffmpeg && ffmpeg.stdin.writable) {
+    const videoFrame = videoBuffer.shift();
+    const audioFrame = audioBuffer.shift();
+
+    // 동기화된 비디오 프레임과 오디오 데이터를 ffmpeg로 전송
+    ffmpeg.stdin.write(videoFrame);
+    ffmpeg.stdin.write(audioFrame);
+
+    isVideoReady = videoBuffer.length > 0;
+    isAudioReady = audioBuffer.length > 0;
+  }
+}
 
 io.on("connection", (socket) => {
   console.log("A new client has connected!");
 
-  let signedUrlSent = false; // 녹화 시작 시 한 번만 서명된 URL을 전송하기 위한 플래그
+  let signedUrlSent = false;
 
   socket.on("start_recording", async (signedUrl) => {
     if (!recording) {
@@ -110,8 +123,8 @@ io.on("connection", (socket) => {
 
     if (!signedUrlSent && signedUrl) {
       try {
-        // 모델 서버에 서명된 URL을 한 번만 전송
-        const response = await axios.post("http://localhost:5003/process_image", {
+        // 모델 서버에 서명된 URL을 전송
+        await axios.post("http://localhost:5003/process_image", {
           signedUrl: signedUrl,
         });
         console.log("Signed URL successfully sent to model server.");
@@ -124,36 +137,42 @@ io.on("connection", (socket) => {
 
   socket.on("stream_image", async (imageBase64) => {
     try {
-      // 이미지를 처리하기 위해 다른 서버로 전송
       const response = await axios.post("http://localhost:5003/process_image", {
         image: imageBase64,
       });
 
       let buffer;
       if (response.data.image) {
-        // 처리된 이미지의 Base64 데이터를 받아 디코딩
         const processedImageBase64 = response.data.image;
         buffer = Buffer.from(processedImageBase64, "base64");
       } else {
-        // 얼굴이 탐지되지 않았으면 원본 이미지를 그대로 사용
         buffer = Buffer.from(imageBase64, "base64");
         console.log("얼굴이 탐지되지 않아 원본 이미지를 사용합니다.");
       }
 
-      // 디코딩된 이미지를 FFmpeg로 전송
-      if (ffmpeg && ffmpeg.stdin.writable) {
-        ffmpeg.stdin.write(buffer);
-      }
+      videoBuffer.push(buffer);
+      isVideoReady = true;
+      attemptSyncAndStream();
     } catch (error) {
       console.error("Error processing image:", error);
     }
   });
 
+  socket.on("stream_audio", async (audioDataBase64) => {
+    try {
+      const buffer = Buffer.from(audioDataBase64, "base64");
+      audioBuffer.push(buffer);
+      isAudioReady = true;
+      attemptSyncAndStream();
+    } catch (error) {
+      console.error("Error processing audio:", error);
+    }
+  });
 
   socket.on("stop_recording", () => {
     if (recording) {
       stopFFmpeg();
-      signedUrlSent = false; // 녹화 중지 시 서명된 URL 전송 여부 초기화
+      signedUrlSent = false;
     }
   });
 
@@ -161,9 +180,6 @@ io.on("connection", (socket) => {
     console.log("Client disconnected");
   });
 });
-
-
-
 
 // MongoDB 연결 설정
 const mongoURI ="mongodb://localhost:27017/makking";

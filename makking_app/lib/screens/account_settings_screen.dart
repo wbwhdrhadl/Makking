@@ -3,8 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   final String userId;
+  final String serverIp;
 
-  AccountSettingsScreen({required this.userId});
+  AccountSettingsScreen({required this.userId, required this.serverIp});
 
   @override
   _AccountSettingsScreenState createState() => _AccountSettingsScreenState();

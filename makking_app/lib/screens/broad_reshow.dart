@@ -8,8 +8,9 @@ import 'package:http/http.dart' as http;
 class BroadReshow extends StatefulWidget {
   final String broadcastName;
   final String userId; // Add userId as a required parameter
+  final String serverIp; // serverIp 필드 추가
 
-  BroadReshow({required this.broadcastName, required this.userId}); // Update constructor
+  BroadReshow({required this.broadcastName, required this.userId, required this.serverIp}); // Update constructor
 
   @override
   _BroadReshowState createState() => _BroadReshowState();
