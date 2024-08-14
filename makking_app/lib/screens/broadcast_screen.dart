@@ -11,8 +11,9 @@ import 'package:flutter/foundation.dart';
 class BroadcastScreen extends StatefulWidget {
   final Uint8List? imageBytes;
   final String userId;
+  final String serverIp;
 
-  BroadcastScreen({this.imageBytes, required this.userId}); // Updated constructor
+  BroadcastScreen({this.imageBytes, required this.userId, required this.serverIp});
 
   @override
   _BroadcastScreenState createState() => _BroadcastScreenState();
@@ -25,6 +26,10 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   IO.Socket? _socket;
   bool isRecording = false;
   bool isStreaming = false;
+  List<String> comments = [];
+  int likes = 0;
+
+  TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
@@ -45,9 +50,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     }
   }
 
-
   void initializeVideoPlayer() {
-    String hlsUrl = "http://172.30.1.66:5001/stream/output.m3u8";
+    String hlsUrl = "http://${widget.serverIp}:5001/stream/output.m3u8";
     _videoPlayerController = VideoPlayerController.network(hlsUrl)
       ..initialize().then((_) {
         setState(() {});
@@ -56,11 +60,25 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   void initializeSocket() {
-    _socket = IO.io('http://172.30.1.66:5001', <String, dynamic>{
+    _socket = IO.io('http://${widget.serverIp}:5001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
     _socket!.connect();
+
+    // Listen for incoming comments and update the state
+    _socket!.on('new_comment', (data) {
+      setState(() {
+        comments.add(data);
+      });
+    });
+
+    // Listen for likes updates
+    _socket!.on('like_update', (data) {
+      setState(() {
+        likes = data;
+      });
+    });
   }
 
   void startStreaming() {
@@ -75,18 +93,17 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   }
 
   Future<void> processImage(CameraImage image) async {
-      var img = await compute(convertYUV420toImage, image);
-      if (img != null && _socket != null && _socket!.connected) {
-        final resizedImg = imglib.copyResize(img, width: 640, height: 480);
-        List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
-        String imageBase64 = base64Encode(Uint8List.fromList(jpg));
+    var img = await compute(convertYUV420toImage, image);
+    if (img != null && _socket != null && _socket!.connected) {
+      final resizedImg = imglib.copyResize(img, width: 640, height: 480);
+      List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
+      String imageBase64 = base64Encode(Uint8List.fromList(jpg));
 
-        // 이미지를 Base64로 인코딩하여 서버로 전송
-        _socket!.emit('stream_image', imageBase64);
-      }
-      setState(() => isStreaming = false); // 스트리밍 완료 후 isStreaming 상태를 false로 설정
+      // Send the image data to the server
+      _socket!.emit('stream_image', imageBase64);
     }
-
+    setState(() => isStreaming = false);
+  }
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
     try {
@@ -111,7 +128,6 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
           int g = (yp - 0.344136 * (up - 128) - 0.714136 * (vp - 128)).toInt();
           int b = (yp + 1.772 * (up - 128)).toInt();
 
-          // Clipping RGB values to be within the 0-255 range
           r = r.clamp(0, 255);
           g = g.clamp(0, 255);
           b = b.clamp(0, 255);
@@ -158,28 +174,96 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     setState(() {});
   }
 
+  void sendComment() {
+    if (_commentController.text.isNotEmpty && _socket != null && _socket!.connected) {
+      _socket!.emit('send_comment', _commentController.text);
+      _commentController.clear();
+    }
+  }
+
+  void sendLike() {
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('send_like');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('Broadcasting'),
+        title: Text('Broadcasting', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: Icon(isRecording ? Icons.stop : Icons.videocam),
+            icon: Icon(isRecording ? Icons.stop : Icons.videocam, color: Colors.red),
             onPressed: toggleStreaming,
           ),
-          IconButton(icon: Icon(Icons.switch_camera), onPressed: toggleCamera),
+          IconButton(
+            icon: Icon(Icons.switch_camera, color: Colors.white),
+            onPressed: toggleCamera,
+          ),
         ],
       ),
-      body: Center(
-        child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _videoPlayerController!.value.aspectRatio,
-                child: VideoPlayer(_videoPlayerController!),
-              )
-            : (_cameraController != null && _cameraController!.value.isInitialized
-                ? CameraPreview(_cameraController!)
-                : CircularProgressIndicator()),
+      body: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
+                ? AspectRatio(
+                    aspectRatio: _videoPlayerController!.value.aspectRatio,
+                    child: VideoPlayer(_videoPlayerController!),
+                  )
+                : (_cameraController != null && _cameraController!.value.isInitialized
+                    ? CameraPreview(_cameraController!)
+                    : Center(child: CircularProgressIndicator())),
+          ),
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: comments.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(comments[index], style: TextStyle(color: Colors.white)),
+                      );
+                    },
+                  ),
+                ),
+                Container(
+                  color: Colors.black54,
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          style: TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: "댓글을 입력하세요...",
+                            hintStyle: TextStyle(color: Colors.white54),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.send, color: Colors.blueAccent),
+                        onPressed: sendComment,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.thumb_up, color: Colors.blueAccent),
+                        onPressed: sendLike,
+                      ),
+                      Text('$likes', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

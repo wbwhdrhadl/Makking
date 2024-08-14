@@ -4,21 +4,27 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'broadcast_screen.dart';
-import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class FaceRecognitionScreen extends StatefulWidget {
   final String title;
   final String userId;
   final bool isMosaicEnabled;
   final bool isSubtitleEnabled;
-  final String serverIp; // serverIp 추가
+  final String serverIp;
+  final File? thumbnailImage;
+  final Uint8List? webThumbnailImageBytes;
 
   FaceRecognitionScreen({
     required this.title,
     required this.userId,
     required this.isMosaicEnabled,
     required this.isSubtitleEnabled,
-    required this.serverIp, // serverIp 추가
+    required this.serverIp,
+    this.thumbnailImage,
+    this.webThumbnailImageBytes,
   });
 
   @override
@@ -28,6 +34,23 @@ class FaceRecognitionScreen extends StatefulWidget {
 class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   Uint8List? imageBytes;
   bool isLoading = false;
+  late IO.Socket socket;
+
+  @override
+  void initState() {
+    super.initState();
+    socket = IO.io('http://${widget.serverIp}:5001', <String, dynamic>{
+      'transports': ['websocket'],
+    });
+
+    socket.on('connect', (_) {
+      print('Connected to server');
+    });
+
+    socket.on('disconnect', (_) {
+      print('Disconnected from server');
+    });
+  }
 
   Future<void> pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -40,34 +63,45 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
     }
   }
 
-  Future<void> uploadImage() async {
+  Future<void> uploadImageAndBroadcastData() async {
     if (imageBytes == null) return;
 
     setState(() {
       isLoading = true;
     });
 
-    final uri = Uri.parse('http://${widget.serverIp}:5001/uploadFile'); // serverIp 사용
-    final request = http.MultipartRequest('POST', uri)
-      ..files.add(http.MultipartFile.fromBytes(
+    try {
+      // Step 1: Upload face image to S3 and get the URL
+      final uploadUri = Uri.parse('http://${widget.serverIp}:5001/uploadFile');
+      final uploadRequest = http.MultipartRequest('POST', uploadUri);
+
+      uploadRequest.files.add(http.MultipartFile.fromBytes(
         'attachment',
         imageBytes!,
-        filename: 'upload.png',
+        filename: 'face_image.png',
       ));
 
-    try {
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
+      final uploadResponse = await uploadRequest.send();
+      final responseBody = await uploadResponse.stream.bytesToString();
       final responseJson = json.decode(responseBody);
 
-      if (response.statusCode == 200) {
-        final imageUrl = responseJson['url'];
-        await generateSignedUrl(imageUrl); // 서명된 URL 생성
+      if (uploadResponse.statusCode == 200) {
+        final String? faceImageUrl = responseJson['url'];
+
+        if (faceImageUrl != null) {
+          // Step 2: Generate signed URL and send to server
+          await generateAndSendSignedUrl(faceImageUrl);
+
+          // Step 3: Save broadcast settings along with faceImageUrl
+          await saveBroadcastData(faceImageUrl);
+        } else {
+          showErrorDialog('S3에서 이미지 URL을 받지 못했습니다.');
+        }
       } else {
         showErrorDialog('이미지 업로드 실패: ${responseJson['message']}');
       }
     } catch (e) {
-      showErrorDialog('이미지 업로드 중 오류 발생: $e');
+      showErrorDialog('서버 요청 중 오류 발생: $e');
     } finally {
       setState(() {
         isLoading = false;
@@ -75,92 +109,79 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
     }
   }
 
-  Future<void> generateSignedUrl(String imageUrl) async {
-    final uri = Uri.parse('http://${widget.serverIp}:5001/generateSignedUrl'); // serverIp 사용
+  Future<void> generateAndSendSignedUrl(String faceImageUrl) async {
     try {
-      final response = await http.post(
-        uri,
+      // Step 2.1: Generate signed URL
+      final signedUrlUri = Uri.parse('http://${widget.serverIp}:5001/generateSignedUrl');
+      final signedUrlResponse = await http.post(
+        signedUrlUri,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'imageUrl': imageUrl}),
+        body: json.encode({'imageUrl': faceImageUrl}),
       );
 
-      if (response.statusCode == 200) {
-        final responseJson = json.decode(response.body);
-        final signedUrl = responseJson['signedUrl'];
+      if (signedUrlResponse.statusCode == 200) {
+        final signedUrlJson = json.decode(signedUrlResponse.body);
+        final String? signedUrl = signedUrlJson['signedUrl'];
 
-        await sendBroadcastDataToServer(signedUrl); // 서명된 URL로 방송 데이터 전송
+        if (signedUrl != null) {
+          // Step 2.2: Send signed URL to server via Socket.IO
+          socket.emit('start_recording', signedUrl);
+        } else {
+          showErrorDialog('서명된 URL이 없습니다.');
+        }
       } else {
-        showErrorDialog('서명된 URL 생성 실패: ${response.body}');
+        showErrorDialog('서명된 URL 생성 실패');
       }
     } catch (e) {
       showErrorDialog('서명된 URL 생성 중 오류 발생: $e');
     }
   }
 
-  Future<void> sendBroadcastDataToServer(String signedUrl) async {
-    final uri = Uri.parse('http://${widget.serverIp}:5001/broadcast/Setting'); // serverIp 사용
+  Future<void> saveBroadcastData(String faceImageUrl) async {
+    final uri = Uri.parse('http://${widget.serverIp}:5001/broadcast/Setting');
+    final request = http.MultipartRequest('POST', uri);
+
+    request.fields['user_id'] = widget.userId;
+    request.fields['title'] = widget.title;
+    request.fields['is_mosaic_enabled'] = widget.isMosaicEnabled.toString();
+    request.fields['is_subtitle_enabled'] = widget.isSubtitleEnabled.toString();
+    request.fields['face_image_url'] = faceImageUrl;
+
+    if (widget.thumbnailImage != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'thumbnail',
+        widget.thumbnailImage!.path,
+      ));
+    } else if (widget.webThumbnailImageBytes != null) {
+      request.files.add(http.MultipartFile.fromBytes(
+        'thumbnail',
+        widget.webThumbnailImageBytes!,
+        filename: 'thumbnail_image.png',
+      ));
+    }
+
     try {
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'user_id': widget.userId,
-          'title': widget.title,
-          'is_mosaic_enabled': widget.isMosaicEnabled,
-          'is_subtitle_enabled': widget.isSubtitleEnabled,
-          'image_url': signedUrl,
-        }),
-      );
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final responseJson = json.decode(responseBody);
 
       if (response.statusCode == 200) {
-        final responseJson = json.decode(response.body);
-
-        // 여기서 받은 응답의 이미지 URL을 처리합니다.
-        final String? receivedImageUrl = responseJson['image'];
-
-        if (receivedImageUrl != null) {
-          // 서명된 URL을 Node.js 서버로 전송하는 함수 호출
-          await sendSignedUrlToNodeServer(receivedImageUrl);
-
-          // 이미지를 사용하는 다른 페이지로 이동
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BroadcastScreen(
-                imageBytes: null, // 이미지는 사용하지 않으므로 null로 설정
-                userId: widget.userId,
-              ),
+        // 데이터를 성공적으로 저장한 후 다음 페이지로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BroadcastScreen(
+              imageBytes: null,
+              userId: widget.userId,
+              serverIp: widget.serverIp, // 서버 IP 전달
             ),
-          );
-        } else {
-          showErrorDialog('이미지 URL이 없습니다.');
-        }
+          ),
+        );
       } else {
-        showErrorDialog('이미지 처리 실패: ${response.body}');
+        showErrorDialog('방송 설정 저장 실패: ${responseJson['message']}');
       }
     } catch (e) {
       showErrorDialog('서버 요청 중 오류 발생: $e');
-    }
-  }
-
-  // 서명된 URL을 Node.js 서버로 전송하는 함수
-  Future<void> sendSignedUrlToNodeServer(String signedUrl) async {
-    final nodeServerUri = Uri.parse('http://${widget.serverIp}:5001/sendSignedUrl'); // serverIp 사용
-
-    try {
-      final response = await http.post(
-        nodeServerUri,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'signedUrl': signedUrl}),
-      );
-
-      if (response.statusCode == 200) {
-        print('Signed URL successfully sent to the Node.js server.');
-      } else {
-        showErrorDialog('Node.js 서버에서 처리 실패: ${response.body}');
-      }
-    } catch (e) {
-      showErrorDialog('Node.js 서버 요청 중 오류 발생: $e');
     }
   }
 
@@ -228,8 +249,8 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                             style: GoogleFonts.doHyeon(color: Colors.white),
                           )
                         : Container(
-                            height: 250, // 높이를 줄여서 이미지가 더 잘 보이도록
-                            width: constraints.maxWidth * 0.8, // 가로 크기를 줄임
+                            height: 250,
+                            width: constraints.maxWidth * 0.8,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
                               image: DecorationImage(
@@ -252,9 +273,9 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                         onPressed: pickImage,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF749BC2),
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 가로 및 세로 길이 줄임
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           textStyle: GoogleFonts.gothicA1(
-                            fontSize: 13, // 글씨 크기 줄임
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           shape: RoundedRectangleBorder(
@@ -267,12 +288,12 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                     SizedBox(height: 20),
                     Center(
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : uploadImage,
+                        onPressed: isLoading ? null : uploadImageAndBroadcastData,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF749BC2),
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 가로 및 세로 길이 줄임
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           textStyle: GoogleFonts.gothicA1(
-                            fontSize: 13, // 글씨 크기 줄임
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           shape: RoundedRectangleBorder(
@@ -283,7 +304,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                             ? CircularProgressIndicator(
                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               )
-                            : Text('다음'),
+                            : Text('방송 시작'),
                       ),
                     ),
                   ],

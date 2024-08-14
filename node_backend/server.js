@@ -12,6 +12,7 @@ const app = express();
 const server = require("http").createServer(app);
 const io = socketIo(server);
 const path = require("path");
+const fs = require("fs"); // fs 모듈 추가
 const { spawn } = require("child_process");
 
 app.use(
@@ -43,34 +44,51 @@ let audioBuffer = []; // 오디오 데이터를 저장할 버퍼
 let isVideoReady = false;
 let isAudioReady = false;
 
-function startFFmpeg() {
-  const outputFilePath = path.join(streamDir, "output.m3u8");
+function startFFmpeg(userId) {
+  const userStreamDir = path.join(streamDir, userId.toString());
+
+  if (!fs.existsSync(userStreamDir)) {
+    fs.mkdirSync(userStreamDir, { recursive: true }); // 유저별 폴더 생성
+    console.log(`Created directory for user: ${userId}`);
+  }
+
+  const outputFilePath = path.join(userStreamDir, "output.m3u8");
   ffmpeg = spawn("ffmpeg", [
-      "-f", "image2pipe",        // 이미지 데이터를 파이프 입력으로 받음
-      "-vcodec", "mjpeg",        // 입력 비디오 코덱을 MJPEG로 설정
-      "-pix_fmt", "yuvj420p",    // 픽셀 포맷을 YUV 4:2:0으로 설정 (JPEG는 yuvj420p)
-      "-s", "320x240",           // 해상도를 320x240으로 설정
-      "-r", "3",                 // 프레임 레이트를 3fps로 설정
-      "-i", "-",                 // 입력을 파이프로 받음
-      "-f", "alsa",              // 오디오 입력을 알사(또는 다른 오디오 장치)로 설정
-      "-i", "hw:0",
-      "-c:v", "libx264",         // 출력 비디오 코덱을 H.264로 설정
-      "-c:a", "aac",             // 출력 오디오 코덱을 AAC로 설정
-      "-b:a", "128k",            // 오디오 비트레이트를 128kbps로 설정
-      "-preset", "ultrafast",    // 인코딩 속도 우선의 설정
-      "-tune", "zerolatency",    // 지연 시간을 최소화하기 위한 튜닝
-      "-profile:v", "baseline",  // H.264 프로파일을 baseline으로 설정 (호환성)
-      "-level", "3.1",           // H.264 레벨을 3.1로 설정
-      "-maxrate", "3000k",       // 최대 비트레이트를 3000kbps로 설정
-      "-bufsize", "6000k",       // 버퍼 크기를 6000kbps로 설정
-      "-pix_fmt", "yuv420p",     // 출력 픽셀 포맷을 YUV 4:2:0으로 설정
-      "-g", "30",                // GOP 크기를 30으로 설정 (두 번째 키프레임 간의 프레임 수)
-      "-hls_time", "2",          // HLS 세그먼트 길이를 2초로 설정
-      "-hls_list_size", "20",    // HLS 목록 크기를 20으로 설정
-      "-hls_flags", "delete_segments",  // 이전 HLS 세그먼트를 삭제하여 디스크 공간을 절약
-      "-f", "hls",               // 출력 포맷을 HLS로 설정
-      outputFilePath             // 출력 파일 경로
+    "-f", "image2pipe",
+    "-vcodec", "mjpeg",
+    "-pix_fmt", "yuvj420p",
+    "-s", "320x240",
+    "-r", "3",
+    "-i", "-",
+    "-f", "alsa",
+    "-i", "hw:0",
+    "-c:v", "libx264",
+    "-c:a", "aac",
+    "-b:a", "128k",
+    "-preset", "ultrafast",
+    "-tune", "zerolatency",
+    "-profile:v", "baseline",
+    "-level", "3.1",
+    "-maxrate", "3000k",
+    "-bufsize", "6000k",
+    "-pix_fmt", "yuv420p",
+    "-g", "30",
+    "-hls_time", "2",
+    "-hls_list_size", "20",
+    "-hls_flags", "delete_segments",
+    "-f", "hls",
+    outputFilePath
   ]);
+
+  ffmpeg.stdout.on("data", (data) => {
+    const message = data.toString();
+    console.log(`FFmpeg output: ${message}`);
+
+    // 파일 생성 시작 로그
+    if (message.includes("Opening 'output.m3u8'")) {
+      console.log("FFmpeg has started creating the output.m3u8 file.");
+    }
+  });
 
   ffmpeg.stderr.on("data", (data) => {
     console.error(`FFmpeg error: ${data}`);
@@ -84,7 +102,7 @@ function startFFmpeg() {
   console.log(`Recording started: ${outputFilePath}`);
 }
 
-function stopFFmpeg() {
+function stopFFmpeg(broadcastId, userId) {
   if (ffmpeg) {
     ffmpeg.stdin.end();
     ffmpeg = null;
@@ -94,6 +112,22 @@ function stopFFmpeg() {
     isVideoReady = false;
     isAudioReady = false;
     console.log("Recording stopped");
+
+    const userStreamDir = path.join(streamDir, userId.toString());
+
+    const filesToSave = fs.readdirSync(userStreamDir).map(file => ({
+        file_name: file,
+        file_path: path.join(userStreamDir, file),
+        file_type: 'video' // 이 부분은 파일 타입에 따라 변경 가능
+     }));
+
+    // 파일 경로를 저장하고, 라이브 상태를 false로 업데이트
+    Broadcast.findByIdAndUpdate(broadcastId, {
+      $push: { files: { $each: filesToSave } },
+      $set: { is_live: false }
+    })
+    .then(() => console.log("Files saved to database, broadcast stopped"))
+    .catch(err => console.error("Failed to save files to database:", err));
   }
 }
 
@@ -115,10 +149,16 @@ io.on("connection", (socket) => {
   console.log("A new client has connected!");
 
   let signedUrlSent = false;
+  let broadcastId;
 
   socket.on("start_recording", async (signedUrl) => {
     if (!recording) {
-      startFFmpeg();
+      // 고유한 방송 ID 생성
+      broadcastId = new mongoose.Types.ObjectId();
+
+      // 방송을 시작할 때 ID를 클라이언트로 보낼 수도 있음
+      socket.emit("broadcast_id", broadcastId.toString());
+      startFFmpeg(socket.id); // 클라이언트의 고유 ID를 사용해 폴더 생성
     }
 
     if (!signedUrlSent && signedUrl) {
@@ -171,7 +211,7 @@ io.on("connection", (socket) => {
 
   socket.on("stop_recording", () => {
     if (recording) {
-      stopFFmpeg();
+      stopFFmpeg(broadcastId); // 방송 ID와 함께 FFmpeg 종료
       signedUrlSent = false;
     }
   });
@@ -182,7 +222,7 @@ io.on("connection", (socket) => {
 });
 
 // MongoDB 연결 설정
-const mongoURI ="mongodb://localhost:27017/makking";
+const mongoURI = "mongodb://localhost:27017/makking";
 mongoose
   .connect(mongoURI, {
     useNewUrlParser: true,

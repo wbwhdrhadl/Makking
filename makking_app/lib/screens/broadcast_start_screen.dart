@@ -3,14 +3,12 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:http/http.dart' as http;
-import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 임포트
-
+import 'package:google_fonts/google_fonts.dart';
 import 'face_recognition_screen.dart';
 
 class BroadcastStartScreen extends StatefulWidget {
   final String userId;
-  final String serverIp;  // serverIp를 받도록 수정
+  final String serverIp;
 
   BroadcastStartScreen({required this.userId, required this.serverIp});
 
@@ -46,60 +44,22 @@ class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
     }
   }
 
-  Future<void> _startBroadcast() async {
-    try {
-      // 서버로 데이터 전송 로직 추가
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('http://${widget.serverIp}:5001/broadcast/Setting'),  // serverIp 사용
-      );
-
-      request.fields['user_id'] = widget.userId;
-      request.fields['title'] = titleController.text;
-      request.fields['is_mosaic_enabled'] = isMosaicEnabled.toString();
-      request.fields['is_subtitle_enabled'] = isSubtitleEnabled.toString();
-
-      if (kIsWeb) {
-        if (_webThumbnailImageBytes != null) {
-          request.files.add(http.MultipartFile.fromBytes(
-            'thumbnail',
-            _webThumbnailImageBytes!,
-            filename: 'thumbnail_image.png',
-          ));
-        }
-      } else {
-        if (_thumbnailImage != null) {
-          request.files.add(await http.MultipartFile.fromPath(
-            'thumbnail',
-            _thumbnailImage!.path,
-          ));
-        }
-      }
-
-      var response = await request.send();
-
-      if (response.statusCode == 200) {
-        print('Broadcast settings saved successfully');
-
-        // FaceRecognitionScreen으로 이동
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FaceRecognitionScreen(
-              userId: widget.userId,
-              isMosaicEnabled: isMosaicEnabled,
-              isSubtitleEnabled: isSubtitleEnabled,
-              title: titleController.text,
-              serverIp: widget.serverIp,  // FaceRecognitionScreen에 serverIp 전달
-            ),
-          ),
-        );
-      } else {
-        print('Failed to save broadcast settings: ${response.reasonPhrase}');
-      }
-    } catch (e) {
-      print('Error: $e');
-    }
+  void _startBroadcast() {
+    // 서버로 데이터를 전송하지 않고 FaceRecognitionScreen으로 데이터 전달
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceRecognitionScreen(
+          userId: widget.userId,
+          isMosaicEnabled: isMosaicEnabled,
+          isSubtitleEnabled: isSubtitleEnabled,
+          title: titleController.text,
+          thumbnailImage: _thumbnailImage,
+          webThumbnailImageBytes: _webThumbnailImageBytes,
+          serverIp: widget.serverIp,
+        ),
+      ),
+    );
   }
 
   @override
@@ -167,8 +127,8 @@ class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
                   labelText: '방송 제목',
                   labelStyle: GoogleFonts.doHyeon(
                     color: Color(0xFF749BC2),
-                    fontSize: 20, // 더 큰 글씨 크기
-                    fontWeight: FontWeight.bold, // 두꺼운 글씨체
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Color(0xFF749BC2)),
