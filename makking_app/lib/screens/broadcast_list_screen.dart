@@ -1,61 +1,56 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'broadcast_start_screen.dart';
 import 'face_recognition_screen.dart';
 import 'broad1.dart';
 import 'broadcast_storage_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'broadcast_storage_screen.dart';
 import 'account_settings_screen.dart';
-import 'package:http/http.dart' as http;
 
-class BroadcastListScreen extends StatefulWidget {
+class BroadcastListScreen extends StatelessWidget {
   final String userId;
   final String serverIp;
 
   BroadcastListScreen({required this.userId, required this.serverIp});
 
-  @override
-  _BroadcastListScreenState createState() => _BroadcastListScreenState();
-}
-
-class _BroadcastListScreenState extends State<BroadcastListScreen> {
-  late Future<List<LiveStreamTile>> liveBroadcasts;
-
-  @override
-  void initState() {
-    super.initState();
-    liveBroadcasts = fetchLiveBroadcasts(widget.serverIp);
-  }
-
-  Future<List<LiveStreamTile>> fetchLiveBroadcasts(String serverIp) async {
-    final response = await http.get(Uri.parse('http://$serverIp/broadcast/live'));
-
-    if (response.statusCode == 200) {
-      final List<dynamic> broadcastData = json.decode(response.body);
-      return broadcastData.map((data) {
-        return LiveStreamTile(
-          profileImage: 'assets/default_profile_image.jpeg', // 기본 이미지 사용
-          streamerName: data['title'],
-          description: '라이브 방송 중', // 기본 설명
-          viewers: 0, // 조회수는 서버에서 제공하지 않는 경우 기본값 설정
-          thumbnail: data['thumbnail_url'] ?? 'assets/default_thumbnail.jpeg', // 기본 썸네일
-          broadcastName: data['title'],
-          userId: data['user_id'],
-          serverIp: serverIp,
-          onTap: (context, userId, serverIp) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => Broadcast1(broadcastName: data['title']),
-              ),
-            );
-          },
+  final List<LiveStreamTile> broadcastList = [
+    LiveStreamTile(
+      profileImage: 'assets/img3.jpeg',
+      streamerName: '와꾸대장봉준',
+      description: '봉준 60만개빵 무창클럽 vs 연합팀 [4경기 점니 3 vs 0 햇살] 스타',
+      viewers: 56880,
+      thumbnail: 'assets/img2.jpeg',
+      broadcastName: '와꾸대장봉준',
+      userId: 'exampleUserId',
+      serverIp: '192.168.1.115',
+      onTap: (BuildContext context, String userId, String serverIp) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Broadcast1(broadcastName: '와꾸대장봉준'),
+          ),
         );
-      }).toList();
-    } else {
-      throw Exception('Failed to load live broadcasts');
-    }
-  }
+      },
+    ),
+    LiveStreamTile(
+      profileImage: 'assets/img4.jpeg',
+      streamerName: '이다군이다은',
+      description: '대학교 등교길 같이 탐험 ㄱㄱ',
+      viewers: 233,
+      thumbnail: 'assets/img1.jpeg',
+      broadcastName: '이다군이다은',
+      userId: 'exampleUserId',
+      serverIp: '192.168.1.115',
+      onTap: (BuildContext context, String userId, String serverIp) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Broadcast1(broadcastName: '이다군이다은'),
+          ),
+        );
+      },
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +64,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BroadcastStartScreen(userId: widget.userId, serverIp: widget.serverIp),
+                  builder: (context) => BroadcastStartScreen(userId: userId, serverIp: serverIp),
                 ),
               );
             },
@@ -79,28 +74,20 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
             onPressed: () {
               showSearch(
                 context: context,
-                delegate: CustomSearchDelegate(broadcastList: [], userId: widget.userId, serverIp: widget.serverIp),
+                delegate: CustomSearchDelegate(broadcastList: broadcastList, userId: userId, serverIp: serverIp),
               );
             },
           ),
         ],
         backgroundColor: Colors.black,
       ),
-      body: FutureBuilder<List<LiveStreamTile>>(
-        future: liveBroadcasts,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return ListView(
-              children: snapshot.data!,
-            );
-          } else {
-            return Center(child: Text('No live broadcasts available.'));
-          }
-        },
+      body: ListView(
+        children: broadcastList
+            .map((broadcast) => InkWell(
+                  onTap: () => broadcast.onTap(context, userId, serverIp),
+                  child: broadcast,
+                ))
+            .toList(),
       ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.black,
@@ -117,7 +104,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadcastStorageScreen(userId: widget.userId, serverIp: widget.serverIp),
+                    builder: (context) => BroadcastStorageScreen(userId: userId, serverIp: serverIp),
                   ),
                 );
               },
@@ -127,7 +114,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
               onPressed: () {
                 showSearch(
                   context: context,
-                  delegate: CustomSearchDelegate(broadcastList: [], userId: widget.userId, serverIp: widget.serverIp),
+                  delegate: CustomSearchDelegate(broadcastList: broadcastList, userId: userId, serverIp: serverIp),
                 );
               },
             ),
@@ -137,7 +124,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AccountSettingsScreen(userId: widget.userId, serverIp: widget.serverIp),
+                    builder: (context) => AccountSettingsScreen(userId: userId,serverIp: serverIp),
                   ),
                 );
               },
@@ -191,7 +178,7 @@ class LiveStreamTile extends StatelessWidget {
             ),
             Container(
               height: 150,
-              child: Image.network(
+              child: Image.asset(
                 thumbnail,
                 fit: BoxFit.cover,
                 width: double.infinity,
