@@ -157,9 +157,6 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
     } else {
       // userId를 함께 서버로 전달
       print("Sending start_recording event with userId: ${widget.userId}"); // 로그 추가
-      _socket!.emit('start_recording', {
-          'userId': widget.userId, // userId를 함께 전달
-      });
       setState(() {
         isRecording = true;
       });

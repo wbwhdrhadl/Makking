@@ -23,15 +23,16 @@ const broadcastSchema = new mongoose.Schema({
   is_subtitle_enabled: Boolean,
   thumbnail_url: String, // 썸네일 이미지 URL 필드 추가
   face_image_url: String, // 얼굴 이미지 URL 추가
-  is_live: { type: Boolean, default: false }, // 라이브 여부 필드 추가
+  is_live: { type: Boolean, default: true }, // 라이브 여부 필드 추가
   files: [
     {
       file_name: String,
       file_path: String,
       file_type: String, // e.g., 'video', 'thumbnail', 'metadata'
     }
-  ]
-});
+  ]}, {
+     timestamps: true // createdAt과 updatedAt 필드를 자동으로 추가
+   });
 
 const Broadcast = mongoose.model('Broadcast', broadcastSchema, "broadcast-setting");
 
@@ -49,7 +50,7 @@ router.post('/broadcast/Setting', upload.fields([{ name: 'thumbnail' }, { name: 
       is_subtitle_enabled,
       thumbnail_url, // 썸네일 이미지 URL 저장
       face_image_url, // 얼굴 이미지 URL 저장
-      is_live: false, // 기본값으로 라이브 상태를 false로 설정
+      is_live: true, // 기본값으로 라이브 상태를 false로 설정
     });
 
     await newBroadcast.save();
@@ -86,4 +87,9 @@ router.patch('/broadcast/:id/live', async (req, res) => {
   }
 });
 
-module.exports = router;
+// 파일 마지막 부분에 Broadcast 모델을 export
+module.exports = {
+  Broadcast,
+  router, // 이미 라우터도 export하고 있는 경우 이렇게 추가
+};
+
