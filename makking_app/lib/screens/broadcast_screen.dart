@@ -144,19 +144,18 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
 
   void toggleStreaming() {
     print("User ID: ${widget.userId}"); // 여기에 userId를 출력
-    if (isRecording) {
+    if (isRecording) {//레코딩 시작
       _socket!.emit('stop_recording');
       setState(() {
         isRecording = false;
         isStreaming = false;
       });
-      _socket!.emit('start_recording', {
-        'userId': widget.userId, // userId를 함께 전달
-      });
       _cameraController?.stopImageStream();
-    } else {
-      // userId를 함께 서버로 전달
-      print("Sending start_recording event with userId: ${widget.userId}"); // 로그 추가
+    } else {//레코딩 멈춤
+      print("Sending start_recording event with userId: ${widget.userId}");
+      _socket!.emit('start_recording', {
+         'userId': widget.userId, // userId를 함께 전달
+      });
       setState(() {
         isRecording = true;
       });
