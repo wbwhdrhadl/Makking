@@ -45,7 +45,7 @@ const Broadcast = mongoose.model('Broadcast', broadcastSchema, "broadcast-settin
 router.post('/broadcast/Setting', upload.fields([{ name: 'thumbnail' }, { name: 'face_image' }]), async (req, res) => {
   try {
     const { user_id, title, is_mosaic_enabled, is_subtitle_enabled } = req.body;
-    const thumbnail_url = req.files['thumbnail'] ? req.files['thumbnail'][0].filename : null;
+    const thumbnail_url = req.files['thumbnail'] ? req.files['thumbnail'][0].path : null;
     const face_image_url = req.files['face_image'] ? req.files['face_image'][0].path : null; // 얼굴 이미지 경로 저장
 
     const newBroadcast = new Broadcast({
@@ -104,6 +104,18 @@ router.get('/broadcasts/live', async (req, res) => {
   }
 });
 
+router.get('/stream/:user_id/output.m3u8', (req, res) => {
+  const broadcasterUserId = broadcast.user_id; // 방송자의 userId를 가져옴
+  const filePath = path.join(__dirname, '../stream', broadcasterUserId, 'output.m3u8');
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error serving m3u8 file:', err);
+      res.status(404).send('File not found');
+    }
+  });
+});
+
 
 // 이미지 파일 제공을 위한 라우터
 router.get('/uploads/:filename', (req, res) => {
@@ -120,6 +132,42 @@ router.get('/uploads/:filename', (req, res) => {
     }
   });
 });
+
+
+// 시청자 수 증가 API
+router.post('/broadcast/:id/viewerEnter', async (req, res) => {
+  try {
+    const broadcastId = req.params.id;
+    const broadcast = await Broadcast.findById(broadcastId);
+    if (!broadcast) {
+      return res.status(404).json({ message: 'Broadcast not found' });
+    }
+
+    broadcast.viewers += 1;
+    await broadcast.save();
+    res.status(200).json({ message: 'Viewer count increased', viewers: broadcast.viewers });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to increase viewer count', error });
+  }
+});
+
+// 시청자 수 감소 API
+router.post('/broadcast/:id/viewerExit', async (req, res) => {
+  try {
+    const broadcastId = req.params.id;
+    const broadcast = await Broadcast.findById(broadcastId);
+    if (!broadcast) {
+      return res.status(404).json({ message: 'Broadcast not found' });
+    }
+
+    broadcast.viewers = Math.max(0, broadcast.viewers - 1); // 시청자 수가 음수가 되지 않도록
+    await broadcast.save();
+    res.status(200).json({ message: 'Viewer count decreased', viewers: broadcast.viewers });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to decrease viewer count', error });
+  }
+});
+
 
 
 

@@ -17,6 +17,7 @@ const { spawn } = require("child_process");
 const { GridFSBucket } = require("mongodb");
 const { Broadcast, router: broadSettingRouter } = require("./routes/broadSetting.js");
 
+app.use('/stream', express.static(path.join(__dirname, 'stream')));
 app.use(cors({
     origin: "*",
     credentials: true,

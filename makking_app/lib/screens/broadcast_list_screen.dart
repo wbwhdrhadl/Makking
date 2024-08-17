@@ -82,7 +82,15 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => Broadcast1(broadcastName: broadcast['title']),
+                    builder: (context) => Broadcast1(
+                      broadcastName: broadcast['title'],
+                      userId : widget.userId,
+                      serverIp: widget.serverIp,
+                      broadcastId: broadcast['_id'], // broadcastId 전달
+                      onLeave: () {
+                        // 방송을 나갈 때 처리할 로직
+                      },
+                    ),
                   ),
                 );
               },
@@ -91,25 +99,24 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                   ListTile(
                     leading: CircleAvatar(
                       backgroundImage: broadcast['profileImage'] != null
-                          ? NetworkImage('http://${widget.serverIp}/' + broadcast['profileImage'])
+                          ? NetworkImage('http://${widget.serverIp}:5001/' + broadcast['profileImage'].replaceAll('\\', '/'))
                           : AssetImage('assets/default_profile.png') as ImageProvider,
                     ),
                     title: Text(broadcast['username'] ?? 'Unknown User', style: GoogleFonts.doHyeon(fontSize: 18, color: Colors.white)),
                     subtitle: Text(broadcast['title'], style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.grey[300])),
-                    trailing: Text('🔴 ${broadcast['viewers'] ?? 0} viewers', style: GoogleFonts.doHyeon(fontSize: 14, color: Color(0xFF00bfff))),
                   ),
                   Container(
                     height: 150,
                     child: broadcast['thumbnail_url'] != null
                         ? Image.network(
-                             () {
-                                final imageUrl = 'http://${widget.serverIp}:5001/' + broadcast['thumbnail_url'].replaceAll('\\', '/');
-                                print('Loading image from URL: $imageUrl');
-                                return imageUrl;
-                              }(),
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                            )
+                            () {
+                              final imageUrl = 'http://${widget.serverIp}:5001/' + broadcast['thumbnail_url'].replaceAll('\\', '/');
+                              print('Loading image from URL: $imageUrl');
+                              return imageUrl;
+                            }(),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          )
                         : Image.asset('assets/default_thumbnail.png', fit: BoxFit.cover, width: double.infinity),
                   ),
                   Padding(
@@ -122,6 +129,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                           onPressed: () {},
                         ),
                         Text('Likes', style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white)),
+                        // 시청자 수 표시
+                        Text('🔴 ${broadcast['viewers'] ?? 0} viewers', style: GoogleFonts.doHyeon(fontSize: 14, color: Color(0xFF00bfff))),
                       ],
                     ),
                   ),
@@ -224,7 +233,15 @@ class CustomSearchDelegate extends SearchDelegate {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => Broadcast1(broadcastName: broadcast['title']),
+                builder: (context) => Broadcast1(
+                  broadcastName: broadcast['title'],
+                  userId : broadcast['user_id'],
+                  serverIp: broadcast['serverIp'],
+                  broadcastId: broadcast['_id'], // broadcastId 전달
+                  onLeave: () {
+                    // 방송을 나갈 때 처리할 로직
+                  },
+                ),
               ),
             );
           },
