@@ -7,22 +7,23 @@ const MessageSchema = new mongoose.Schema({
   broadcastId: { type: mongoose.Schema.Types.ObjectId, ref: 'Broadcast', required: true },
   messages: [
     {
-      username: { type: String, required: true }, // username 필드 추가
+      username: { type: String, required: true },
       message: { type: String, required: true },
-      createdAt: { type: Date, default: Date.now }, // 시간 필드 추가
+      createdAt: { type: Date, default: Date.now },
     },
   ],
   likes: { type: Number, default: 0 },
-  likedBy: [{ type: String }], // 각 사용자가 좋아요를 눌렀는지 확인하는 배열 추가
+  likedBy: [{ type: String }],
 });
 
 const Message = mongoose.model('Message', MessageSchema);
 
-// 모든 메시지 가져오기 - 최신 16개만
+// 메시지 가져오기 라우트
 router.get('/messages/:broadcastId', async (req, res) => {
-  const { broadcastId } = req.params;
   try {
+    const broadcastId = new mongoose.Types.ObjectId(req.params.broadcastId); // ObjectId로 변환
     const messages = await Message.findOne({ broadcastId }, { messages: { $slice: -16 } });
+
     if (!messages) {
       return res.status(404).send({ error: 'No messages found for this broadcast' });
     }
@@ -35,9 +36,9 @@ router.get('/messages/:broadcastId', async (req, res) => {
 
 // 새로운 메시지 포스트
 router.post('/messages/:broadcastId', async (req, res) => {
-  const { broadcastId } = req.params;
   const { message, username } = req.body;
   try {
+    const broadcastId = mongoose.Types.ObjectId(req.params.broadcastId); // ObjectId로 변환
     const updatedMessage = await Message.findOneAndUpdate(
       { broadcastId },
       { $push: { messages: { message, username, createdAt: new Date() } }, $setOnInsert: { likes: 0 } },
@@ -50,12 +51,11 @@ router.post('/messages/:broadcastId', async (req, res) => {
   }
 });
 
-// 좋아요 수 업데이트 라우트 (토글 기능 추가)
+// 좋아요 수 업데이트 라우트
 router.post('/messages/:broadcastId/like', async (req, res) => {
-  const { broadcastId } = req.params;
-  const { userId } = req.body; // 클라이언트에서 userId를 받아옴
-
+  const { userId } = req.body;
   try {
+    const broadcastId = new mongoose.Types.ObjectId(req.params.broadcastId); // ObjectId로 변환
     const message = await Message.findOne({ broadcastId });
 
     if (!message) {
@@ -65,11 +65,9 @@ router.post('/messages/:broadcastId/like', async (req, res) => {
     const userIndex = message.likedBy.indexOf(userId);
 
     if (userIndex === -1) {
-      // 사용자가 아직 좋아요를 누르지 않은 경우
       message.likes += 1;
       message.likedBy.push(userId);
     } else {
-      // 사용자가 이미 좋아요를 누른 경우 (좋아요 취소)
       message.likes -= 1;
       message.likedBy.splice(userIndex, 1);
     }
@@ -81,7 +79,5 @@ router.post('/messages/:broadcastId/like', async (req, res) => {
     res.status(500).send(error.message);
   }
 });
-
-
 
 module.exports = router;

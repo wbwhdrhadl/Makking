@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math';
+import 'dart:math'; // Random 클래스를 사용하기 위해 추가
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -27,7 +27,7 @@ class Broadcast1 extends StatefulWidget {
 
 class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [];
+  final List<Map<String, dynamic>> _messages = []; // _messages 변수 정의
   final ScrollController _scrollController = ScrollController();
   VideoPlayerController? _videoPlayerController;
   late AnimationController _animationController;
@@ -68,11 +68,7 @@ class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateM
       _isKeyboardVisible = bottomInset > 0.0;
     });
 
-    if (_isKeyboardVisible) {
-      _disableOrientationLock();
-    } else {
-      _setLandscapeMode();
-    }
+    // Orientation lock remains in landscape mode
   }
 
   void _setLandscapeMode() {
@@ -89,20 +85,45 @@ class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateM
     ]);
   }
 
-  void _disableOrientationLock() {
-    SystemChrome.setPreferredOrientations([]);
-  }
-
   Future<void> _initializePlayer() async {
-    final m3u8Url = 'http://${widget.serverIp}:5001/stream/${widget.userId}/output.m3u8';
+    try {
+      print('Start fetching broadcast information...');
+      final response = await http.get(
+        Uri.parse('http://${widget.serverIp}:5001/broadcast/${widget.broadcastId}'),
+      );
 
-    _videoPlayerController = VideoPlayerController.network(m3u8Url)
-      ..initialize().then((_) {
-        setState(() {});
-        _videoPlayerController!.play();
-      }).catchError((error) {
-        print('Failed to load video: $error');
-      });
+      print('Response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final broadcastData = json.decode(response.body);
+        print('Broadcast data: $broadcastData');
+
+        if (broadcastData.containsKey('userId')) {
+          final broadcastingUserId = broadcastData['userId']; // user_id 값을 사용
+          print('Broadcasting User ID: $broadcastingUserId');
+
+          // 얻은 user_id를 사용하여 m3u8 URL 구성
+          final m3u8Url = 'http://${widget.serverIp}:5001/stream/$broadcastingUserId/output.m3u8';
+          print('m3u8 URL: $m3u8Url');
+
+          // 비디오 플레이어 초기화
+          _videoPlayerController = VideoPlayerController.network(m3u8Url)
+            ..initialize().then((_) {
+              print('Video initialized successfully');
+              setState(() {});
+              _videoPlayerController!.play();
+            }).catchError((error) {
+              print('Failed to load video: $error');
+            });
+        } else {
+          print('Error: userId not found in broadcast data');
+        }
+      } else {
+        print('Failed to load broadcast information: ${response.statusCode}');
+        print('Response body: ${response.body}');
+      }
+    } catch (error) {
+      print('Error fetching broadcast information: $error');
+    }
   }
 
   Future<void> _fetchMessages() async {

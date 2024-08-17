@@ -85,6 +85,8 @@ flutter:
     - assets/daeun.jpeg
     - assets/video1.mp4
     - assets/logo.jpeg
+    - assets/default_profile.png
+    - assets/default_img.png
 
 
   # To add assets to your application, add an assets section, like this:

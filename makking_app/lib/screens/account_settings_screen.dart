@@ -25,7 +25,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _username = prefs.getString('username') ?? 'Guest';
-      _profileImageUrl = prefs.getString('profileImageUrl'); // 프로필 이미지 URL 로드
+      _profileImageUrl = prefs.getString('profileImageUrl');
     });
   }
 
@@ -65,6 +65,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       );
     }
   }
+
+  Future<void> _saveProfileImageUrl(String imageUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profileImage', imageUrl);
+  }
+
 
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
@@ -122,7 +128,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               radius: 40,
               backgroundImage: _profileImageUrl != null
                   ? NetworkImage(_profileImageUrl!)
-                  : AssetImage('assets/img4.jpeg') as ImageProvider, // 프로필 이미지 경로
+                  : AssetImage('assets/default_img.png') as ImageProvider, // 프로필 이미지 경로
             ),
             title: Text(
               _username,

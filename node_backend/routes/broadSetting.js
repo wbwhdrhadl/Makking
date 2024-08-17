@@ -6,7 +6,6 @@ const { User, router: UserRouter } = require("./User.js");
 const path = require('path');
 
 
-
 // Multer 설정
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -104,34 +103,77 @@ router.get('/broadcasts/live', async (req, res) => {
   }
 });
 
-router.get('/stream/:user_id/output.m3u8', (req, res) => {
-  const broadcasterUserId = broadcast.user_id; // 방송자의 userId를 가져옴
-  const filePath = path.join(__dirname, '../stream', broadcasterUserId, 'output.m3u8');
+router.get('/stream/:user_id/output.m3u8', async (req, res) => {
+  const { user_id } = req.params;
 
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error('Error serving m3u8 file:', err);
-      res.status(404).send('File not found');
+  // 여기서 user_id를 기준으로 방송 정보를 가져옴
+  try {
+    const broadcast = await Broadcast.findOne({ user_id: user_id });
+
+    if (!broadcast) {
+      return res.status(404).send('Broadcast not found');
     }
-  });
+
+    // 방송자의 user_id로 파일 경로를 설정
+    const filePath = path.join(__dirname, '../stream', broadcast.user_id.toString(), 'output.m3u8');
+
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('Error serving m3u8 file:', err);
+        res.status(404).send('File not found');
+      }
+    });
+  } catch (error) {
+    console.error('Error retrieving broadcast:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
+
 
 
 // 이미지 파일 제공을 위한 라우터
 router.get('/uploads/:filename', (req, res) => {
   const filename = req.params.filename;
-  const filePath = path.join(__dirname, '../uploads', filename); // 현재 경로
-
-  // 파일 경로를 로그로 출력하여 확인
-  console.log('Serving file from:', filePath);
+  const filePath = path.join(__dirname, '../uploads', filename); // 파일 경로 구성
 
   res.sendFile(filePath, (err) => {
     if (err) {
       console.error(`Error serving file ${filename}:`, err);
-      res.status(404).send("File not found");
+      res.status(404).send('File not found');
     }
   });
 });
+
+// ObjectId를 안전하게 변환하는 유틸리티 함수
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
+}
+
+// 방송의 m3u8 URL 가져오기
+router.get('/broadcast/:broadcastId', async (req, res) => {
+  try {
+    console.log('Received request for broadcast:', req.params.broadcastId);
+    const broadcast = await Broadcast.findById(req.params.broadcastId);
+    if (!broadcast) {
+      console.log('Broadcast not found for id:', req.params.broadcastId);
+      return res.status(404).json({ error: 'Broadcast not found' });
+    }
+    const user = await User.findById(broadcast.user_id); // 방송의 user_id로 사용자 검색
+    if (!user) {
+      console.log('User not found for user_id:', broadcast.user_id);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    console.log('Broadcast found:', broadcast);
+    console.log('User found:', user);
+    res.json({ userId: user._id, ...broadcast._doc });
+  } catch (error) {
+    console.error('Error fetching broadcast:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
 
 
 // 시청자 수 증가 API
@@ -167,6 +209,8 @@ router.post('/broadcast/:id/viewerExit', async (req, res) => {
     res.status(500).json({ message: 'Failed to decrease viewer count', error });
   }
 });
+
+
 
 
 
