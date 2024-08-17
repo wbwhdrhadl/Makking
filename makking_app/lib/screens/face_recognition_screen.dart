@@ -249,16 +249,17 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                             style: GoogleFonts.doHyeon(color: Colors.white),
                           )
                         : Container(
-                            height: 250,
-                            width: constraints.maxWidth * 0.8,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(
-                                image: MemoryImage(imageBytes!),
-                                fit: BoxFit.cover,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  imageBytes!,
+                                  fit: BoxFit.contain, // 이미지 원본 크기로 표시
+                                ),
                               ),
                             ),
-                          ),
                     SizedBox(height: 20),
                     Text(
                       imageBytes == null
