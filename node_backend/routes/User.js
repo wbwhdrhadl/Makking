@@ -161,4 +161,8 @@ router.get('/user/:userId', async (req, res) => {
 // 정적 파일 제공을 위한 경로 설정
 router.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-module.exports = router;
+// 파일 마지막 부분에 Broadcast 모델을 export
+module.exports = {
+  User,
+  router, // 이미 라우터도 export하고 있는 경우 이렇게 추가
+};

@@ -250,7 +250,7 @@ const chatRouter = require("./routes/broaddetail.js");
 const s3URLPassRouter = require("./routes/s3_url_pass.js");
 const s3URLCreateRouter = require("./routes/s3_url_create.js");
 const s3Router = require("./routes/s3.js");
-const userRouter = require("./routes/User.js");
+const { router: userRouter } = require("./routes/User");
 const kakaoUserRouter = require("./routes/kakaoUser.js");
 const naverLoginRouter = require("./routes/naverUser.js");
 
