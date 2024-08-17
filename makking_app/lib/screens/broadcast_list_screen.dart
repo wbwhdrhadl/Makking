@@ -19,6 +19,7 @@ class BroadcastListScreen extends StatefulWidget {
 
 class _BroadcastListScreenState extends State<BroadcastListScreen> {
   List<dynamic> broadcastList = [];
+  Set<String> likedBroadcasts = Set<String>();
 
   @override
   void initState() {
@@ -38,6 +39,36 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
       }
     } catch (e) {
       print('Error fetching live broadcasts: $e');
+    }
+  }
+
+  Future<void> likeBroadcast(String broadcastId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://${widget.serverIp}:5001/messages/$broadcastId/like'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': widget.userId}), // userId 전송
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        setState(() {
+          if (likedBroadcasts.contains(broadcastId)) {
+            likedBroadcasts.remove(broadcastId); // 좋아요 취소
+          } else {
+            likedBroadcasts.add(broadcastId); // 좋아요 추가
+          }
+          // 좋아요 수를 업데이트
+          final broadcastIndex = broadcastList.indexWhere((b) => b['_id'] == broadcastId);
+          if (broadcastIndex != -1) {
+            broadcastList[broadcastIndex]['likes'] = responseData['likes'];
+          }
+        });
+      } else {
+        print('Failed to like/unlike broadcast');
+      }
+    } catch (e) {
+      print('Error liking/unliking broadcast: $e');
     }
   }
 
@@ -74,6 +105,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
         itemCount: broadcastList.length,
         itemBuilder: (context, index) {
           final broadcast = broadcastList[index];
+          final isLiked = likedBroadcasts.contains(broadcast['_id']);
           return Card(
             color: Colors.grey[850],
             margin: EdgeInsets.all(10),
@@ -84,7 +116,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                   MaterialPageRoute(
                     builder: (context) => Broadcast1(
                       broadcastName: broadcast['title'],
-                      userId : widget.userId,
+                      userId: widget.userId,
                       serverIp: widget.serverIp,
                       broadcastId: broadcast['_id'], // broadcastId 전달
                       onLeave: () {
@@ -109,11 +141,7 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                     height: 150,
                     child: broadcast['thumbnail_url'] != null
                         ? Image.network(
-                            () {
-                              final imageUrl = 'http://${widget.serverIp}:5001/' + broadcast['thumbnail_url'].replaceAll('\\', '/');
-                              print('Loading image from URL: $imageUrl');
-                              return imageUrl;
-                            }(),
+                            'http://${widget.serverIp}:5001/' + broadcast['thumbnail_url'].replaceAll('\\', '/'),
                             fit: BoxFit.cover,
                             width: double.infinity,
                           )
@@ -125,11 +153,15 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: Icon(Icons.thumb_up, color: Color(0xFF00bfff)),
-                          onPressed: () {},
+                          icon: Icon(
+                            Icons.thumb_up,
+                            color: isLiked ? Color(0xFF00bfff) : Colors.white, // 좋아요 여부에 따라 색상 변경
+                          ),
+                          onPressed: () {
+                            likeBroadcast(broadcast['_id']);
+                          },
                         ),
-                        Text('Likes', style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white)),
-                        // 시청자 수 표시
+                        Text('${broadcast['likes'] ?? 0}', style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white)), // 좋아요 수 표시
                         Text('🔴 ${broadcast['viewers'] ?? 0} viewers', style: GoogleFonts.doHyeon(fontSize: 14, color: Color(0xFF00bfff))),
                       ],
                     ),
@@ -235,9 +267,9 @@ class CustomSearchDelegate extends SearchDelegate {
               MaterialPageRoute(
                 builder: (context) => Broadcast1(
                   broadcastName: broadcast['title'],
-                  userId : broadcast['user_id'],
+                  userId: broadcast['user_id'],
                   serverIp: broadcast['serverIp'],
-                  broadcastId: broadcast['_id'], // broadcastId 전달
+                  broadcastId: broadcast['_id'],
                   onLeave: () {
                     // 방송을 나갈 때 처리할 로직
                   },
