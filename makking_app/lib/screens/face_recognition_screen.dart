@@ -124,8 +124,19 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
         final String? signedUrl = signedUrlJson['signedUrl'];
 
         if (signedUrl != null) {
-          // Step 2.2: Send signed URL to server via Socket.IO
-          socket.emit('start_recording', signedUrl);
+          // Step 2.2: Send signed URL to model server
+          final sendUrlUri = Uri.parse('http://${widget.serverIp}:5001/sendSignedUrl');
+          final response = await http.post(
+            sendUrlUri,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'signedUrl': signedUrl}),
+          );
+
+          if (response.statusCode == 200) {
+            print('Signed URL successfully sent to model server.');
+          } else {
+            showErrorDialog('모델 서버로 서명된 URL 전송 실패');
+          }
         } else {
           showErrorDialog('서명된 URL이 없습니다.');
         }
@@ -136,6 +147,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       showErrorDialog('서명된 URL 생성 중 오류 발생: $e');
     }
   }
+
 
   Future<void> saveBroadcastData(String faceImageUrl) async {
     final uri = Uri.parse('http://${widget.serverIp}:5001/broadcast/Setting');
