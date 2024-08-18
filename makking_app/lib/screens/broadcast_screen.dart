@@ -5,7 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart';
 import 'package:flutter/foundation.dart';
 
 class BroadcastScreen extends StatefulWidget {
@@ -19,55 +19,24 @@ class BroadcastScreen extends StatefulWidget {
   _BroadcastScreenState createState() => _BroadcastScreenState();
 }
 
-class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingObserver {
+class _BroadcastScreenState extends State<BroadcastScreen> {
   List<CameraDescription> _cameras = [];
   CameraController? _cameraController;
+  VideoPlayerController? _videoPlayerController;
   IO.Socket? _socket;
   bool isRecording = false;
   bool isStreaming = false;
   List<String> comments = [];
   int likes = 0;
   bool _isKeyboardVisible = false;
+  final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _setLandscapeMode();
     initializeCamera();
+    initializeVideoPlayer();
     initializeSocket();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _setPortraitMode();
-    _cameraController?.dispose();
-    _socket?.disconnect();
-    super.dispose();
-  }
-
-  @override
-  void didChangeMetrics() {
-    super.didChangeMetrics();
-    final bottomInset = WidgetsBinding.instance.window.viewInsets.bottom;
-    setState(() {
-      _isKeyboardVisible = bottomInset > 0.0;
-    });
-  }
-
-  void _setLandscapeMode() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeRight,
-      DeviceOrientation.landscapeLeft,
-    ]);
-  }
-
-  void _setPortraitMode() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
   }
 
   Future<void> initializeCamera() async {
@@ -81,6 +50,15 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     }
   }
 
+  void initializeVideoPlayer() {
+    String hlsUrl = "http://${widget.serverIp}:5001/stream/output.m3u8";
+    _videoPlayerController = VideoPlayerController.network(hlsUrl)
+      ..initialize().then((_) {
+        setState(() {});
+        _videoPlayerController!.play();
+      });
+  }
+
   void initializeSocket() {
     _socket = IO.io('http://${widget.serverIp}:5001', <String, dynamic>{
       'transports': ['websocket'],
@@ -88,12 +66,14 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     });
     _socket!.connect();
 
+    // Listen for incoming comments and update the state
     _socket!.on('new_comment', (data) {
       setState(() {
         comments.add(data);
       });
     });
 
+    // Listen for likes updates
     _socket!.on('like_update', (data) {
       setState(() {
         likes = data;
@@ -119,6 +99,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
       List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
       String imageBase64 = base64Encode(Uint8List.fromList(jpg));
 
+      // Send the image data to the server
       _socket!.emit('stream_image', imageBase64);
     }
     setState(() => isStreaming = false);
@@ -162,16 +143,18 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
   }
 
   void toggleStreaming() {
-    if (isRecording) {
+    print("User ID: ${widget.userId}"); // 여기에 userId를 출력
+    if (isRecording) {//레코딩 시작
       _socket!.emit('stop_recording');
       setState(() {
         isRecording = false;
         isStreaming = false;
       });
       _cameraController?.stopImageStream();
-    } else {
+    } else {//레코딩 멈춤
+      print("Sending start_recording event with userId: ${widget.userId}");
       _socket!.emit('start_recording', {
-        'userId': widget.userId,
+         'userId': widget.userId, // userId를 함께 전달
       });
       setState(() {
         isRecording = true;
@@ -179,6 +162,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
       startStreaming();
     }
   }
+
 
   void toggleCamera() async {
     if (_cameras.isEmpty) return;
@@ -195,56 +179,72 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     setState(() {});
   }
 
+  void sendComment() {
+    if (_commentController.text.isNotEmpty && _socket != null && _socket!.connected) {
+      _socket!.emit('send_comment', _commentController.text);
+      _commentController.clear();
+    }
+  }
+
+  void sendLike() {
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('send_like');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
+      appBar: AppBar(
+        title: Text('Broadcasting', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: Icon(isRecording ? Icons.stop : Icons.videocam, color: Colors.red),
+            onPressed: toggleStreaming,
+          ),
+          IconButton(
+            icon: Icon(Icons.switch_camera, color: Colors.white),
+            onPressed: toggleCamera,
+          ),
+        ],
+      ),
+      body: Row(
         children: [
-          _cameraController != null && _cameraController!.value.isInitialized
-              ? Positioned.fill(
-                  child: CameraPreview(_cameraController!),
-                )
-              : Center(child: CircularProgressIndicator()),
-
-          // 채팅창
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.35,
-              color: Colors.black.withOpacity(0.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      '채팅',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      itemCount: comments.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          title: Text(comments[index], style: TextStyle(color: Colors.white)),
-                        );
-                      },
-                    ),
+          Expanded(
+            flex: 2,
+            child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
+                ? AspectRatio(
+                    aspectRatio: _videoPlayerController!.value.aspectRatio,
+                    child: VideoPlayer(_videoPlayerController!),
+                  )
+                : (_cameraController != null && _cameraController!.value.isInitialized
+                    ? CameraPreview(_cameraController!)
+                    : Center(child: CircularProgressIndicator())),
+          ),
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: comments.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(comments[index], style: TextStyle(color: Colors.white)),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
           ),
 
-          // 녹화 버튼 및 카메라 전환 버튼을 화면 오른쪽에 배치
+          // 녹화 버튼 및 카메라 전환 버튼을 화면 왼쪽에 배치
           Positioned(
             top: MediaQuery.of(context).size.height * 0.3, // 화면 중간쯤 위치
-            right: 10,
+            left: 10,
             child: Column(
               children: [
                 IconButton(
@@ -262,5 +262,13 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    _videoPlayerController?.dispose();
+    _socket?.disconnect();
+    super.dispose();
   }
 }
