@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const multer = require("multer");
 const { User, router: UserRouter } = require("./User.js");
+const { Message, router: MessageRouter } = require('./broaddetail.js');
 const path = require('path');
 
 
@@ -41,12 +42,13 @@ const broadcastSchema = new mongoose.Schema({
 const Broadcast = mongoose.model('Broadcast', broadcastSchema, "broadcast-setting");
 
 // 방송 설정 저장 API
-router.post('/broadcast/Setting', upload.fields([{ name: 'thumbnail' }, { name: 'face_image' }]), async (req, res) => {
+router.post('/broadcast/setting', upload.fields([{ name: 'thumbnail' }, { name: 'face_image' }]), async (req, res) => {
   try {
     const { user_id, title, is_mosaic_enabled, is_subtitle_enabled } = req.body;
     const thumbnail_url = req.files['thumbnail'] ? req.files['thumbnail'][0].path : null;
     const face_image_url = req.files['face_image'] ? req.files['face_image'][0].path : null; // 얼굴 이미지 경로 저장
 
+    // 방송 데이터 저장
     const newBroadcast = new Broadcast({
       user_id,
       title,
@@ -54,16 +56,30 @@ router.post('/broadcast/Setting', upload.fields([{ name: 'thumbnail' }, { name: 
       is_subtitle_enabled,
       thumbnail_url, // 썸네일 이미지 URL 저장
       face_image_url, // 얼굴 이미지 URL 저장
-      is_live: true, // 기본값으로 라이브 상태를 false로 설정
+      is_live: true, // 기본값으로 라이브 상태를 true로 설정
     });
 
-    await newBroadcast.save();
+    // newBroadcast 저장 후 broadcast._id를 참조합니다.
+    const savedBroadcast = await newBroadcast.save();
+
+    // 메시지 데이터 생성 및 저장
+    const message = new Message({
+      broadcastId: savedBroadcast._id, // 저장된 방송의 ID 참조
+      messages: [
+        {
+          username: user_id, // user_id 사용
+          message: `${title} 방송이 시작되었습니다.`,
+        },
+      ],
+    });
+    await message.save();
 
     res.status(200).json({ message: 'Broadcast saved successfully', thumbnail_url, face_image_url });
   } catch (error) {
     res.status(500).json({ message: 'Failed to save broadcast', error });
   }
 });
+
 
 
 // 방송 라이브 상태 업데이트 API

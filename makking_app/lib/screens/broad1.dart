@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'dart:math'; // Random 클래스를 사용하기 위해 추가
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class Broadcast1 extends StatefulWidget {
   final String broadcastName;
@@ -25,28 +26,32 @@ class Broadcast1 extends StatefulWidget {
   _Broadcast1State createState() => _Broadcast1State();
 }
 
-class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _Broadcast1State extends State<Broadcast1> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = []; // _messages 변수 정의
+  final List<Map<String, dynamic>> _messages = [];
   final ScrollController _scrollController = ScrollController();
   VideoPlayerController? _videoPlayerController;
   late AnimationController _animationController;
-  List<Widget> _floatingHearts = [];
-  bool _isKeyboardVisible = false;
+  late IO.Socket socket;
+  final Map<String, Color> userColors = {}; // 유저별 색상 저장
+  final List<Color> neonColors = [Colors.pinkAccent, Colors.blueAccent, Colors.greenAccent, Colors.purpleAccent, Colors.orangeAccent];
+
+  bool _isKeyboardVisible = false; // 키보드 표시 여부 확인
+  List<Widget> _floatingHearts = []; // 하트 애니메이션 위젯 리스트
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _setLandscapeMode();
-    _fetchMessages();
     _initializePlayer();
     _increaseViewerCount();
-
     _animationController = AnimationController(
       vsync: this,
       duration: Duration(seconds: 1),
     );
+    _fetchMessages(); // 기존 채팅 불러오기
+    _connectToSocket();
   }
 
   @override
@@ -56,9 +61,79 @@ class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateM
     widget.onLeave();
     _videoPlayerController?.dispose();
     _animationController.dispose();
+    socket.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
+
+  void _connectToSocket() {
+    socket = IO.io('http://${widget.serverIp}:5001', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+
+    socket.connect();
+    socket.onConnect((_) {
+      print('Connected to server');
+      socket.emit('joinRoom', {'broadcastId': widget.broadcastId, 'userId': widget.userId});
+    });
+
+    socket.on('receiveMessage', (data) {
+      print('Received message data: $data'); // 데이터 구조 확인
+
+      if (data is List) {
+        for (var messageData in data) {
+          String username = messageData['username'] ?? 'Unknown User'; // 'username' 필드를 사용
+
+          // 유저별 색상을 랜덤하게 설정, 이미 설정된 유저는 기존 색상 유지
+          if (!userColors.containsKey(username)) {
+            userColors[username] = neonColors[Random().nextInt(neonColors.length)];
+          }
+
+          setState(() {
+            _messages.add({
+              'username': username,
+              'message': messageData['message'] ?? '메시지 없음',
+            });
+          });
+        }
+        _scrollToBottom();
+      } else {
+        print('Unexpected data format: $data');
+      }
+    });
+
+    socket.onDisconnect((_) => print('Disconnected from server'));
+  }
+
+  Future<void> _fetchMessages() async {
+    try {
+      final response = await http.get(Uri.parse('http://${widget.serverIp}:5001/messages/${widget.broadcastId}'));
+      if (response.statusCode == 200) {
+        List<dynamic> messages = json.decode(response.body);
+        setState(() {
+          _messages.clear(); // 기존 메시지를 초기화하여 중복 방지
+          for (var msg in messages) {
+            String username = msg['username'] ?? 'Unknown User'; // name 필드를 사용
+
+            if (!userColors.containsKey(username)) {
+              userColors[username] = neonColors[Random().nextInt(neonColors.length)];
+            }
+
+            _messages.add({
+              'username': username,
+              'message': msg['message'] ?? '메시지 없음',
+            });
+          }
+        });
+        // 메시지가 모두 로드된 후 스크롤을 아래로 이동
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      }
+    } catch (error) {
+      print('Error fetching messages: $error');
+    }
+  }
+
 
   @override
   void didChangeMetrics() {
@@ -67,8 +142,6 @@ class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateM
     setState(() {
       _isKeyboardVisible = bottomInset > 0.0;
     });
-
-    // Orientation lock remains in landscape mode
   }
 
   void _setLandscapeMode() {
@@ -87,92 +160,56 @@ class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateM
 
   Future<void> _initializePlayer() async {
     try {
-      print('Start fetching broadcast information...');
       final response = await http.get(
         Uri.parse('http://${widget.serverIp}:5001/broadcast/${widget.broadcastId}'),
       );
 
-      print('Response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final broadcastData = json.decode(response.body);
-        print('Broadcast data: $broadcastData');
 
         if (broadcastData.containsKey('userId')) {
-          final broadcastingUserId = broadcastData['userId']; // user_id 값을 사용
-          print('Broadcasting User ID: $broadcastingUserId');
-
-          // 얻은 user_id를 사용하여 m3u8 URL 구성
+          final broadcastingUserId = broadcastData['userId'];
           final m3u8Url = 'http://${widget.serverIp}:5001/stream/$broadcastingUserId/output.m3u8';
-          print('m3u8 URL: $m3u8Url');
 
-          // 비디오 플레이어 초기화
           _videoPlayerController = VideoPlayerController.network(m3u8Url)
             ..initialize().then((_) {
-              print('Video initialized successfully');
               setState(() {});
               _videoPlayerController!.play();
             }).catchError((error) {
               print('Failed to load video: $error');
             });
-        } else {
-          print('Error: userId not found in broadcast data');
         }
-      } else {
-        print('Failed to load broadcast information: ${response.statusCode}');
-        print('Response body: ${response.body}');
       }
     } catch (error) {
       print('Error fetching broadcast information: $error');
     }
   }
 
-  Future<void> _fetchMessages() async {
-    try {
-      final response = await http.get(Uri.parse('http://${widget.serverIp}:5001/messages/${widget.broadcastName}'));
-      if (response.statusCode == 200) {
-        List<dynamic> messages = json.decode(response.body);
-        List<Map<String, String>> messageList = messages.map<Map<String, String>>((msg) {
-          return {
-            'username': msg['username'] ?? 'Unknown User',
-            'message': msg['message']?.toString() ?? '메시지 없음',
-          };
-        }).toList();
-        setState(() {
-          _messages.clear();
-          _messages.addAll(messageList);
-        });
-      } else {
-        print('Failed to load messages: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error fetching messages: $e');
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
   Future<void> _sendMessage(String message) async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://${widget.serverIp}:5001/messages/${widget.broadcastName}'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'message': message}),
-      );
-      if (response.statusCode == 200) {
-        _fetchMessages().then((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      } else {
-        print('Failed to send message: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error sending message: $e');
-    }
+    final url = Uri.parse('http://${widget.serverIp}:5001/messages/${widget.broadcastId}');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'message': message,
+        'username': widget.userId,
+      }),
+    );
+    _controller.clear();
+    FocusScope.of(context).unfocus();
+    _scrollToBottom();
   }
+
 
   Future<void> _increaseViewerCount() async {
     try {
@@ -240,195 +277,147 @@ class _Broadcast1State extends State<Broadcast1> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          _videoPlayerController != null && _videoPlayerController!.value.isInitialized
-              ? Positioned.fill(
-                  child: AspectRatio(
-                    aspectRatio: _videoPlayerController!.value.aspectRatio,
-                    child: VideoPlayer(_videoPlayerController!),
-                  ),
-                )
-              : Center(child: CircularProgressIndicator()),
-
-          if (!_isKeyboardVisible)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.35,
-                color: Colors.black.withOpacity(0.5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        '채팅',
-                        style: GoogleFonts.doHyeon(
-                          color: Colors.white,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final message = _messages[index];
-                          return ChatMessage(
-                            message: '${message['username']} | ${message['message']}',
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  _videoPlayerController != null && _videoPlayerController!.value.isInitialized
+                      ? Positioned.fill(
+                          child: AspectRatio(
+                            aspectRatio: _videoPlayerController!.value.aspectRatio,
+                            child: VideoPlayer(_videoPlayerController!),
+                          ),
+                        )
+                      : Center(child: CircularProgressIndicator()),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.35,
+                      color: Colors.black.withOpacity(0.5),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              style: TextStyle(fontSize: 14),
-                              decoration: InputDecoration(
-                                hintText: '채팅 입력...',
-                                hintStyle: TextStyle(fontSize: 14),
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 10,
-                                  horizontal: 20,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 5),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF66a1ff),
-                              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              '전송',
+                              '채팅',
                               style: GoogleFonts.doHyeon(
-                                color: Colors.black,
-                                fontSize: 14,
+                                color: Colors.white,
+                                fontSize: 18,
                               ),
                             ),
-                            onPressed: () {
-                              String message = _controller.text;
-                              if (message.isNotEmpty) {
-                                _sendMessage(message);
-                                _controller.clear();
-                              }
-                            },
                           ),
-                          SizedBox(width: 5),
-                          IconButton(
-                            icon: Icon(Icons.favorite, color: Colors.pink),
-                            onPressed: () {
-                              _animationController.forward(from: 0.0);
-                              _addHeart();
-                            },
+                          Expanded(
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: EdgeInsets.symmetric(horizontal: 8.0),
+                              itemCount: _messages.length,
+                              itemBuilder: (context, index) {
+                                final message = _messages[index];
+                                final username = message['username']!;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: '$username: ',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: userColors[username], // 유저별 랜덤 네온 색상
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: message['message'],
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  ..._floatingHearts,
+                ],
               ),
             ),
-
-          if (_isKeyboardVisible)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                color: Colors.black.withOpacity(0.5),
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        style: TextStyle(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: '채팅 입력...',
-                          hintStyle: TextStyle(fontSize: 14),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 20,
-                          ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      style: TextStyle(fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: '채팅 입력...',
+                        hintStyle: TextStyle(fontSize: 14),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 20,
                         ),
                       ),
                     ),
-                    SizedBox(width: 5),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF66a1ff),
-                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                      ),
-                      child: Text(
-                        '전송',
-                        style: GoogleFonts.doHyeon(
-                          color: Colors.black,
-                          fontSize: 14,
-                        ),
-                      ),
-                      onPressed: () {
-                        String message = _controller.text;
-                        if (message.isNotEmpty) {
-                          _sendMessage(message);
-                          _controller.clear();
-                        }
-                      },
+                  ),
+                  SizedBox(width: 5),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF66a1ff),
+                      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                     ),
-                    SizedBox(width: 5),
-                    IconButton(
-                      icon: Icon(Icons.favorite, color: Colors.pink),
-                      onPressed: () {
-                        _animationController.forward(from: 0.0);
-                        _addHeart();
-                      },
+                    child: Text(
+                      '전송',
+                      style: GoogleFonts.doHyeon(
+                        color: Colors.black,
+                        fontSize: 14,
+                      ),
                     ),
-                  ],
-                ),
+                    onPressed: () {
+                      String message = _controller.text;
+                      if (message.isNotEmpty) {
+                        _sendMessage(message);
+                      }
+                    },
+                  ),
+                  SizedBox(width: 5),
+                  IconButton(
+                    icon: Icon(Icons.favorite, color: Colors.pink),
+                    onPressed: () {
+                      _animationController.forward(from: 0.0);
+                      _addHeart();
+                    },
+                  ),
+                ],
               ),
             ),
-          ..._floatingHearts,
-        ],
-      ),
-    );
-  }
-}
-
-class ChatMessage extends StatelessWidget {
-  final String message;
-
-  ChatMessage({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Text(
-        message,
-        style: GoogleFonts.doHyeon(color: Colors.white),
+          ],
+        ),
       ),
     );
   }

@@ -16,6 +16,7 @@ const fs = require("fs");
 const { spawn } = require("child_process");
 const { GridFSBucket } = require("mongodb");
 const { Broadcast, router: broadSettingRouter } = require("./routes/broadSetting.js");
+const { Message, router: MessageRouter, initSocket} = require('./routes/broaddetail.js');
 
 app.use('/stream', express.static(path.join(__dirname, 'stream')));
 app.use(cors({
@@ -240,6 +241,32 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("joinRoom", (data) => {
+        broadcastId = data.broadcastId;
+        userId = data.userId;
+        socket.join(broadcastId); // 사용자를 특정 방송 방에 추가
+        console.log(`User ${userId} joined room ${broadcastId}`);
+      });
+
+      // 사용자가 채팅 메시지를 전송
+      socket.on("sendMessage", async (data) => {
+        console.log('Received message data:', data);
+        const { broadcastId, message, username } = data;
+
+        try {
+          const updatedMessage = await Message.findOneAndUpdate(
+            { broadcastId: new mongoose.Types.ObjectId(broadcastId) },
+            { $push: { messages: { message, username, createdAt: new Date() } }, $setOnInsert: { likes: 0 } },
+            { new: true, upsert: true }
+          );
+
+          console.log('Updated message:', updatedMessage.messages);
+          io.to(broadcastId).emit("receiveMessage", updatedMessage.messages);
+        } catch (error) {
+          console.error("Error while updating message:", error);
+        }
+      });
+
     socket.on("disconnect", () => {
         console.log("Client disconnected");
     });
@@ -247,7 +274,6 @@ io.on("connection", (socket) => {
 
 
 // Route 설정
-const chatRouter = require("./routes/broaddetail.js");
 const s3URLPassRouter = require("./routes/s3_url_pass.js");
 const s3URLCreateRouter = require("./routes/s3_url_create.js");
 const s3Router = require("./routes/s3.js");
@@ -255,11 +281,13 @@ const { router: userRouter } = require("./routes/User");
 const kakaoUserRouter = require("./routes/kakaoUser.js");
 const naverLoginRouter = require("./routes/naverUser.js");
 
+initSocket(io);
+
 app.use("/", s3URLPassRouter);
+app.use("/", MessageRouter);
 app.use("/", s3URLCreateRouter);
 app.use("/", naverLoginRouter);
 app.use("/", broadSettingRouter);
-app.use("/", chatRouter);
 app.use("/", s3Router);
 app.use("/", kakaoUserRouter);
 app.use("/", userRouter);

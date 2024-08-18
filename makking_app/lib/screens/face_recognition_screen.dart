@@ -172,6 +172,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       ));
     }
 
+
     try {
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
