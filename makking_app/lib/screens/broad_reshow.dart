@@ -10,7 +10,10 @@ class BroadReshow extends StatefulWidget {
   final String userId; // Add userId as a required parameter
   final String serverIp; // serverIp 필드 추가
 
-  BroadReshow({required this.broadcastName, required this.userId, required this.serverIp}); // Update constructor
+  BroadReshow(
+      {required this.broadcastName,
+      required this.userId,
+      required this.serverIp}); // Update constructor
 
   @override
   _BroadReshowState createState() => _BroadReshowState();
@@ -117,8 +120,10 @@ class _BroadReshowState extends State<BroadReshow> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black, // Scaffold 배경색을 검은색으로 설정
       appBar: AppBar(
         title: Text(widget.broadcastName),
+        backgroundColor: Colors.black, // AppBar 배경색을 검은색으로 설정
       ),
       body: Center(
         child: Column(
@@ -165,7 +170,9 @@ class _BroadReshowState extends State<BroadReshow> {
                   children: [
                     CircularProgressIndicator(),
                     SizedBox(height: 10),
-                    Text('자막 생성 중입니다. 잠시만 기다려 주세요.'),
+                    Text('자막 생성 중입니다. 잠시만 기다려 주세요.',
+                        style:
+                            TextStyle(color: Colors.white)), // Text 색상을 흰색으로 설정
                   ],
                 ),
               ),
@@ -261,12 +268,15 @@ class _BroadReshowState extends State<BroadReshow> {
                 vertical: 16, horizontal: 24), // Button padding
             elevation: 8, // Shadow effect
             shadowColor: Colors.black.withOpacity(0.3), // Shadow color
+            backgroundColor:
+                Color.fromARGB(255, 13, 203, 105), // 버튼 배경색을 검은색으로 설정
           ),
           child: Text(
             '자막 생성하기',
             style: TextStyle(
               fontSize: 18, // Font size
               fontWeight: FontWeight.bold, // Font weight
+              color: Colors.black, // 글자색을 흰색으로 설정
             ),
           ),
         ),

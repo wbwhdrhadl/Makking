@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -11,9 +12,9 @@ import 'broadcast_storage_screen.dart';
 
 class BroadcastStorageScreen extends StatelessWidget {
   final String userId;
-  final String serverIp; // serverIp 필드 추가
+  final String serverIp;
 
-  BroadcastStorageScreen({required this.userId, required this.serverIp}); // serverIp 추가
+  BroadcastStorageScreen({required this.userId, required this.serverIp});
 
   final List<LiveStreamTile> broadcastList = [
     LiveStreamTile(
@@ -29,7 +30,8 @@ class BroadcastStorageScreen extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
+            builder: (context) => BroadReshow(
+                broadcastName: 'example', userId: userId, serverIp: serverIp),
           ),
         );
       },
@@ -40,21 +42,31 @@ class BroadcastStorageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('지난 방송 다시보기'),
+        title: Text(
+          '지난 방송 다시보기',
+          style: TextStyle(
+            color: Colors.white, // 글자색을 흰색으로 설정
+            fontWeight: FontWeight.bold, // 글씨 두께를 Bold로 설정
+          ),
+        ),
+        backgroundColor: Colors.black, // 배경색을 검정색으로 설정
         actions: [
           IconButton(
-            icon: Icon(Icons.video_library),
+            icon: Icon(Icons.video_library, color: Colors.white), // 아이콘 색상 변경
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
+                  builder: (context) => BroadReshow(
+                      broadcastName: 'example',
+                      userId: userId,
+                      serverIp: serverIp),
                 ),
               );
             },
           ),
           IconButton(
-            icon: Icon(Icons.face_2),
+            icon: Icon(Icons.face_2, color: Colors.white), // 아이콘 색상 변경
             onPressed: () {
               Navigator.push(
                 context,
@@ -64,83 +76,83 @@ class BroadcastStorageScreen extends StatelessWidget {
                     userId: userId,
                     isMosaicEnabled: false,
                     isSubtitleEnabled: false,
-                    serverIp: serverIp, // serverIp 추가
+                    serverIp: serverIp,
                   ),
                 ),
               );
             },
           ),
           IconButton(
-            icon: Icon(Icons.search),
+            icon: Icon(Icons.search, color: Colors.white), // 아이콘 색상 변경
             onPressed: () {
               showSearch(
                 context: context,
                 delegate: CustomSearchDelegate(
                   broadcastList: broadcastList,
                   userId: userId,
-                  serverIp: serverIp, // serverIp 추가
+                  serverIp: serverIp,
                 ),
               );
             },
           ),
         ],
       ),
-      body: ListView(
-        children: broadcastList
-            .map((broadcast) => InkWell(
-                  onTap: () => broadcast.onTap(context, userId, serverIp), // serverIp 전달
-                  child: broadcast,
-                ))
-            .toList(),
+      body: Container(
+        color: Colors.black, // 배경색을 검정색으로 설정
+        child: ListView(
+          children: broadcastList
+              .map((broadcast) => InkWell(
+                    onTap: () => broadcast.onTap(context, userId, serverIp),
+                    child: broadcast,
+                  ))
+              .toList(),
+        ),
       ),
       bottomNavigationBar: BottomAppBar(
+        color: Colors.black, // 배경색을 검정색으로 설정
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
-              icon: Icon(Icons.home),
+              icon: Icon(Icons.home, color: Color(0xFF00bfff)), // 아이콘 색상 변경
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: Icon(Icons.save, color: Color(0xFF00bfff)), // 아이콘 색상 변경
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
+                    builder: (context) => BroadReshow(
+                        broadcastName: 'example',
+                        userId: userId,
+                        serverIp: serverIp),
                   ),
                 );
               },
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BroadReshow(broadcastName: 'example', userId: userId, serverIp: serverIp),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.search),
+              icon: Icon(Icons.search, color: Color(0xFF00bfff)), // 아이콘 색상 변경
               onPressed: () {
                 showSearch(
                   context: context,
                   delegate: CustomSearchDelegate(
                     broadcastList: broadcastList,
                     userId: userId,
-                    serverIp: serverIp, // serverIp 추가
+                    serverIp: serverIp,
                   ),
                 );
               },
             ),
             IconButton(
-              icon: Icon(Icons.person),
+              icon: Icon(Icons.person, color: Color(0xFF00bfff)), // 아이콘 색상 변경
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => AccountSettingsScreen(
                       userId: userId,
-                      serverIp: serverIp, // serverIp 추가
+                      serverIp: serverIp,
                     ),
                   ),
                 );
@@ -162,7 +174,7 @@ class LiveStreamTile extends StatefulWidget {
   final String broadcastName;
   final String userId;
   final String serverIp;
-  final Function(BuildContext, String, String) onTap; // serverIp 추가
+  final Function(BuildContext, String, String) onTap;
 
   LiveStreamTile({
     required this.profileImage,
@@ -245,15 +257,17 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.grey[900], // 카드 배경을 어둡게 설정
       margin: EdgeInsets.all(10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white), // 카드 테두리를 흰색으로 설정
       ),
       elevation: 5,
       child: InkWell(
         onTap: () {
           incrementViewers();
-          widget.onTap(context, widget.userId, widget.serverIp); // serverIp 전달
+          widget.onTap(context, widget.userId, widget.serverIp);
         },
         child: Row(
           children: [
@@ -283,13 +297,14 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: Colors.white, // 텍스트 색상을 흰색으로 변경
                       ),
                     ),
                     SizedBox(height: 4),
                     Text(
                       widget.description,
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Colors.grey[400], // 설명 텍스트를 밝은 회색으로 변경
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -304,12 +319,16 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
                               icon: Icon(Icons.thumb_up, color: Colors.blue),
                               onPressed: incrementLikes,
                             ),
-                            Text('$likes likes'),
+                            Text('$likes likes',
+                                style: TextStyle(
+                                    color: Colors.white)), // 텍스트 색상 변경
                           ],
                         ),
                         Text(
                           '🔴 $viewers viewers',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white), // 텍스트 색상 변경
                         ),
                       ],
                     ),
@@ -327,15 +346,36 @@ class _LiveStreamTileState extends State<LiveStreamTile> {
 class CustomSearchDelegate extends SearchDelegate {
   final List<LiveStreamTile> broadcastList;
   final String userId;
-  final String serverIp; // serverIp 필드 추가
+  final String serverIp;
 
-  CustomSearchDelegate({required this.broadcastList, required this.userId, required this.serverIp}); // serverIp 추가
+  CustomSearchDelegate(
+      {required this.broadcastList,
+      required this.userId,
+      required this.serverIp});
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    return ThemeData(
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.black, // AppBar 배경색을 검정색으로 설정
+        iconTheme: IconThemeData(color: Colors.white), // 아이콘 색상 흰색으로 설정
+        titleTextStyle:
+            TextStyle(color: Colors.white, fontSize: 20), // 검색어 텍스트 색상 흰색으로 설정
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        hintStyle: TextStyle(color: Colors.grey), // 검색창 힌트 텍스트 색상
+      ),
+      textTheme: TextTheme(
+        headline6: TextStyle(color: Colors.white), // 검색창 텍스트 색상 흰색으로 설정
+      ),
+    );
+  }
 
   @override
   List<Widget> buildActions(BuildContext context) {
     return [
       IconButton(
-        icon: Icon(Icons.clear),
+        icon: Icon(Icons.clear, color: Colors.white), // 아이콘 색상 변경
         onPressed: () {
           query = '';
           showSuggestions(context);
@@ -347,7 +387,7 @@ class CustomSearchDelegate extends SearchDelegate {
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back),
+      icon: Icon(Icons.arrow_back, color: Colors.white), // 아이콘 색상 변경
       onPressed: () {
         close(context, null);
       },
@@ -370,7 +410,7 @@ class CustomSearchDelegate extends SearchDelegate {
                 builder: (context) => BroadReshow(
                   broadcastName: broadcast.broadcastName,
                   userId: userId,
-                  serverIp: serverIp, // serverIp 전달
+                  serverIp: serverIp,
                 ),
               ),
             );
@@ -391,7 +431,8 @@ class CustomSearchDelegate extends SearchDelegate {
       itemCount: suggestions.length,
       itemBuilder: (context, index) {
         return ListTile(
-          title: Text(suggestions[index].streamerName),
+          title: Text(suggestions[index].streamerName,
+              style: TextStyle(color: Colors.white)), // 텍스트 색상 변경
           onTap: () {
             query = suggestions[index].streamerName;
             showResults(context);

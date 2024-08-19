@@ -29,7 +29,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
 
   Future<void> fetchLiveBroadcasts() async {
     try {
-      final response = await http.get(Uri.parse('http://${widget.serverIp}:5001/broadcasts/live'));
+      final response = await http
+          .get(Uri.parse('http://${widget.serverIp}:5001/broadcasts/live'));
       if (response.statusCode == 200) {
         setState(() {
           broadcastList = json.decode(response.body);
@@ -59,7 +60,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
             likedBroadcasts.add(broadcastId); // 좋아요 추가
           }
           // 좋아요 수를 업데이트
-          final broadcastIndex = broadcastList.indexWhere((b) => b['_id'] == broadcastId);
+          final broadcastIndex =
+              broadcastList.indexWhere((b) => b['_id'] == broadcastId);
           if (broadcastIndex != -1) {
             broadcastList[broadcastIndex]['likes'] = responseData['likes'];
           }
@@ -76,7 +78,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('라이브 방송', style: GoogleFonts.jua(fontSize: 24, color: Colors.white)),
+        title: Text('라이브 방송',
+            style: GoogleFonts.jua(fontSize: 24, color: Colors.white)),
         actions: [
           IconButton(
             icon: Icon(Icons.video_library, color: Colors.white),
@@ -84,7 +87,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BroadcastStartScreen(userId: widget.userId, serverIp: widget.serverIp),
+                  builder: (context) => BroadcastStartScreen(
+                      userId: widget.userId, serverIp: widget.serverIp),
                 ),
               );
             },
@@ -131,21 +135,30 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                   ListTile(
                     leading: CircleAvatar(
                       backgroundImage: broadcast['profileImage'] != null
-                          ? NetworkImage('http://${widget.serverIp}:5001/' + broadcast['profileImage'].replaceAll('\\', '/'))
-                          : AssetImage('assets/default_profile.png') as ImageProvider,
+                          ? NetworkImage('http://${widget.serverIp}:5001/' +
+                              broadcast['profileImage'].replaceAll('\\', '/'))
+                          : AssetImage('assets/default_profile.png')
+                              as ImageProvider,
                     ),
-                    title: Text(broadcast['username'] ?? 'Unknown User', style: GoogleFonts.doHyeon(fontSize: 18, color: Colors.white)),
-                    subtitle: Text(broadcast['title'], style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.grey[300])),
+                    title: Text(broadcast['username'] ?? 'Unknown User',
+                        style: GoogleFonts.doHyeon(
+                            fontSize: 18, color: Colors.white)),
+                    subtitle: Text(broadcast['title'],
+                        style: GoogleFonts.doHyeon(
+                            fontSize: 14, color: Colors.grey[300])),
                   ),
                   Container(
                     height: 150,
                     child: broadcast['thumbnail_url'] != null
                         ? Image.network(
-                            'http://${widget.serverIp}:5001/' + broadcast['thumbnail_url'].replaceAll('\\', '/'),
+                            'http://${widget.serverIp}:5001/' +
+                                broadcast['thumbnail_url']
+                                    .replaceAll('\\', '/'),
                             fit: BoxFit.cover,
                             width: double.infinity,
                           )
-                        : Image.asset('assets/default_thumbnail.png', fit: BoxFit.cover, width: double.infinity),
+                        : Image.asset('assets/default_thumbnail.png',
+                            fit: BoxFit.cover, width: double.infinity),
                   ),
                   Padding(
                     padding: EdgeInsets.all(8),
@@ -155,14 +168,20 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                         IconButton(
                           icon: Icon(
                             Icons.thumb_up,
-                            color: isLiked ? Color(0xFF00bfff) : Colors.white, // 좋아요 여부에 따라 색상 변경
+                            color: isLiked
+                                ? Color(0xFF00bfff)
+                                : Colors.white, // 좋아요 여부에 따라 색상 변경
                           ),
                           onPressed: () {
                             likeBroadcast(broadcast['_id']);
                           },
                         ),
-                        Text('${broadcast['likes'] ?? 0}', style: GoogleFonts.doHyeon(fontSize: 14, color: Colors.white)), // 좋아요 수 표시
-                        Text('🔴 ${broadcast['viewers'] ?? 0} viewers', style: GoogleFonts.doHyeon(fontSize: 14, color: Color(0xFF00bfff))),
+                        Text('${broadcast['likes'] ?? 0}',
+                            style: GoogleFonts.doHyeon(
+                                fontSize: 14, color: Colors.white)), // 좋아요 수 표시
+                        Text('🔴 ${broadcast['viewers'] ?? 0} viewers',
+                            style: GoogleFonts.doHyeon(
+                                fontSize: 14, color: Color(0xFF00bfff))),
                       ],
                     ),
                   ),
@@ -187,7 +206,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BroadcastStorageScreen(userId: widget.userId, serverIp: widget.serverIp),
+                    builder: (context) => BroadcastStorageScreen(
+                        userId: widget.userId, serverIp: widget.serverIp),
                   ),
                 );
               },
@@ -207,7 +227,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AccountSettingsScreen(userId: widget.userId, serverIp: widget.serverIp),
+                    builder: (context) => AccountSettingsScreen(
+                        userId: widget.userId, serverIp: widget.serverIp),
                   ),
                 );
               },
@@ -223,6 +244,29 @@ class CustomSearchDelegate extends SearchDelegate {
   final List<dynamic> broadcastList;
 
   CustomSearchDelegate({required this.broadcastList});
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    return ThemeData(
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.black, // AppBar 배경색을 검정색으로 설정
+        iconTheme: IconThemeData(color: Colors.white), // 아이콘 색상 흰색으로 설정
+        titleTextStyle:
+            TextStyle(color: Colors.white, fontSize: 20), // 검색어 텍스트 색상 흰색으로 설정
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        hintStyle: TextStyle(color: Colors.grey), // 검색창 힌트 텍스트 색상
+        // 검색창에 사용자가 입력하는 글씨 색상을 흰색으로 설정
+        filled: true,
+        fillColor: Colors.black, // 검색창 배경을 검정색으로 설정
+        border: InputBorder.none, // 검색창의 기본 테두리 제거
+        contentPadding: EdgeInsets.all(10), // 검색창 내부 여백 조정
+      ),
+      textTheme: TextTheme(
+        headline6: TextStyle(color: Colors.white), // 검색창 텍스트 색상 설정
+      ),
+    );
+  }
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -250,7 +294,9 @@ class CustomSearchDelegate extends SearchDelegate {
   @override
   Widget buildResults(BuildContext context) {
     List<dynamic> results = broadcastList.where((broadcast) {
-      return broadcast['username'].toLowerCase().contains(query.toLowerCase()) ||
+      return broadcast['username']
+              .toLowerCase()
+              .contains(query.toLowerCase()) ||
           broadcast['title'].toLowerCase().contains(query.toLowerCase());
     }).toList();
 
@@ -259,8 +305,10 @@ class CustomSearchDelegate extends SearchDelegate {
       itemBuilder: (context, index) {
         final broadcast = results[index];
         return ListTile(
-          title: Text(broadcast['title'], style: GoogleFonts.doHyeon(color: Colors.white)),
-          subtitle: Text(broadcast['username'], style: GoogleFonts.doHyeon(color: Colors.white)),
+          title: Text(broadcast['title'],
+              style: GoogleFonts.doHyeon(color: Colors.white)),
+          subtitle: Text(broadcast['username'],
+              style: GoogleFonts.doHyeon(color: Colors.white)),
           onTap: () {
             Navigator.push(
               context,
@@ -285,7 +333,9 @@ class CustomSearchDelegate extends SearchDelegate {
   @override
   Widget buildSuggestions(BuildContext context) {
     List<dynamic> suggestions = broadcastList.where((broadcast) {
-      return broadcast['username'].toLowerCase().contains(query.toLowerCase()) ||
+      return broadcast['username']
+              .toLowerCase()
+              .contains(query.toLowerCase()) ||
           broadcast['title'].toLowerCase().contains(query.toLowerCase());
     }).toList();
 
@@ -293,8 +343,10 @@ class CustomSearchDelegate extends SearchDelegate {
       itemCount: suggestions.length,
       itemBuilder: (context, index) {
         return ListTile(
-          title: Text(suggestions[index]['title'], style: GoogleFonts.doHyeon(color: Colors.white)),
-          subtitle: Text(suggestions[index]['username'], style: GoogleFonts.doHyeon(color: Colors.white)),
+          title: Text(suggestions[index]['title'],
+              style: GoogleFonts.doHyeon(color: Colors.white)),
+          subtitle: Text(suggestions[index]['username'],
+              style: GoogleFonts.doHyeon(color: Colors.white)),
           onTap: () {
             query = suggestions[index]['title'];
             showResults(context);
