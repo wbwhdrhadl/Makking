@@ -366,7 +366,7 @@ class CustomSearchDelegate extends SearchDelegate {
         hintStyle: TextStyle(color: Colors.grey), // 검색창 힌트 텍스트 색상
       ),
       textTheme: TextTheme(
-        headline6: TextStyle(color: Colors.white), // 검색창 텍스트 색상 흰색으로 설정
+        headlineSmall: TextStyle(color: Colors.white),
       ),
     );
   }

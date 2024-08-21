@@ -263,7 +263,7 @@ class CustomSearchDelegate extends SearchDelegate {
         contentPadding: EdgeInsets.all(10), // 검색창 내부 여백 조정
       ),
       textTheme: TextTheme(
-        headline6: TextStyle(color: Colors.white), // 검색창 텍스트 색상 설정
+        headlineSmall: TextStyle(color: Colors.white),
       ),
     );
   }
