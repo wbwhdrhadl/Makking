@@ -12,7 +12,6 @@ class FaceRecognitionScreen extends StatefulWidget {
   final String title;
   final String userId;
   final bool isMosaicEnabled;
-  final bool isSubtitleEnabled;
   final String serverIp;
   final File? thumbnailImage;
   final Uint8List? webThumbnailImageBytes;
@@ -21,7 +20,6 @@ class FaceRecognitionScreen extends StatefulWidget {
     required this.title,
     required this.userId,
     required this.isMosaicEnabled,
-    required this.isSubtitleEnabled,
     required this.serverIp,
     this.thumbnailImage,
     this.webThumbnailImageBytes,
@@ -156,7 +154,6 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
     request.fields['user_id'] = widget.userId;
     request.fields['title'] = widget.title;
     request.fields['is_mosaic_enabled'] = widget.isMosaicEnabled.toString();
-    request.fields['is_subtitle_enabled'] = widget.isSubtitleEnabled.toString();
     request.fields['face_image_url'] = faceImageUrl;
 
     if (widget.thumbnailImage != null) {

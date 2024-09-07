@@ -18,7 +18,6 @@ class BroadcastStartScreen extends StatefulWidget {
 
 class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
   bool isMosaicEnabled = false;
-  bool isSubtitleEnabled = false;
   TextEditingController titleController = TextEditingController();
   File? _thumbnailImage;
   Uint8List? _webThumbnailImageBytes;
@@ -45,14 +44,12 @@ class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
   }
 
   void _startBroadcast() {
-    // 서버로 데이터를 전송하지 않고 FaceRecognitionScreen으로 데이터 전달
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => FaceRecognitionScreen(
           userId: widget.userId,
           isMosaicEnabled: isMosaicEnabled,
-          isSubtitleEnabled: isSubtitleEnabled,
           title: titleController.text,
           thumbnailImage: _thumbnailImage,
           webThumbnailImageBytes: _webThumbnailImageBytes,
@@ -151,19 +148,6 @@ class _BroadcastStartScreenState extends State<BroadcastStartScreen> {
                 onChanged: (bool value) {
                   setState(() {
                     isMosaicEnabled = value;
-                  });
-                },
-                activeColor: Color(0xFF749BC2),
-              ),
-              SwitchListTile(
-                title: Text(
-                  '자막 설정',
-                  style: GoogleFonts.doHyeon(color: Colors.white),
-                ),
-                value: isSubtitleEnabled,
-                onChanged: (bool value) {
-                  setState(() {
-                    isSubtitleEnabled = value;
                   });
                 },
                 activeColor: Color(0xFF749BC2),

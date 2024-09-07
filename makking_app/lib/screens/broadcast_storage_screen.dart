@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -75,7 +74,6 @@ class BroadcastStorageScreen extends StatelessWidget {
                     title: '얼굴 인식 화면',
                     userId: userId,
                     isMosaicEnabled: false,
-                    isSubtitleEnabled: false,
                     serverIp: serverIp,
                   ),
                 ),
