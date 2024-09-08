@@ -8,12 +8,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 from yolo5face.get_model import get_model
 import base64
 import requests
+from ultralytics import YOLO
 
 app = FastAPI()
 
 # YOLO 얼굴 감지 모델 초기화
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model = get_model("yolov5n", device=device, min_face=24)
+model_face = get_model("yolov5n", device=device, min_face=24)
+# YOLOv8 유해물질 감지 모델 불러오기
+model_dangerous = YOLO('best.pt')
 
 # 전역 변수로 이미지 캐시 설정
 cached_image = None
@@ -40,6 +43,9 @@ async def process_image(request: Request):
     data = await request.json()
     signed_url = data.get("signedUrl")
     image_data = data.get("image")
+    is_mosaic_enabled = data.get("isMosaicEnabled", "false") == "true"
+
+    print("모자이크 여부 :",is_mosaic_enabled)
 
     if signed_url:
         # 서명된 URL을 처리하는 로직
@@ -93,84 +99,95 @@ async def process_image(request: Request):
         raise HTTPException(status_code=400, detail="Either signedUrl or image data is required")
 
     # 업로드된 이미지에서 얼굴 검출 및 처리
-    boxes, key_points, scores = model(rgb_image, target_size=512)
+    boxes, key_points, scores = model_face(rgb_image, target_size=512)
     if len(boxes) > 0:
-        faces_info = []
-        best_combined_score = float("-inf")
-        most_similar_image_rect = None
+            faces_info = []
+            best_combined_score = float("-inf")
+            most_similar_image_rect = None
 
-        for box in boxes:
-            x1, y1, x2, y2 = map(int, box)
-            cropped_face = rgb_image[y1:y2, x1:x2]
+            for box in boxes:
+                x1, y1, x2, y2 = map(int, box)
+                cropped_face = rgb_image[y1:y2, x1:x2]
 
-            try:
-                face_encodings = face_recognition.face_encodings(
-                    rgb_image, [(y1, x2, y2, x1)]
-                )
-                if face_encodings:
-                    face_encoding = face_encodings[0]
-                    face_distance = np.linalg.norm(reference_encoding - face_encoding)
-                    face_similarity = 1 - face_distance / np.linalg.norm(
-                        reference_encoding
-                    )
-                    cosine_sim = cosine_similarity_images(
-                        cached_image, cropped_face
-                    )
-                    face_similarity_normalized = face_similarity * 100
-                    cosine_similarity_normalized = cosine_sim * 100
-                    combined_similarity = np.mean(
-                        [face_similarity_normalized, cosine_similarity_normalized]
-                    )
-                    faces_info.append((combined_similarity, (x1, y1, x2, y2)))
+                try:
+                    face_encodings = face_recognition.face_encodings(rgb_image, [(y1, x2, y2, x1)])
+                    if face_encodings:
+                        face_encoding = face_encodings[0]
+                        face_distance = np.linalg.norm(reference_encoding - face_encoding)
+                        face_similarity = 1 - face_distance / np.linalg.norm(reference_encoding)
+                        cosine_sim = cosine_similarity_images(cached_image, cropped_face)
+                        face_similarity_normalized = face_similarity * 100
+                        cosine_similarity_normalized = cosine_sim * 100
+                        combined_similarity = np.mean([face_similarity_normalized, cosine_similarity_normalized])
+                        faces_info.append((combined_similarity, (x1, y1, x2, y2)))
 
-                    if combined_similarity > best_combined_score:
-                        best_combined_score = combined_similarity
-                        most_similar_image_rect = (x1, y1, x2, y2)
+                        if combined_similarity > best_combined_score:
+                            best_combined_score = combined_similarity
+                            most_similar_image_rect = (x1, y1, x2, y2)
 
-                    print(f"얼굴 검출 및 비교 성공: {combined_similarity}% 유사")
-                else:
+                except Exception as e:
                     return JSONResponse(
-                        content={"message": "얼굴 특징 벡터를 추출할 수 없습니다."},
-                        status_code=200,  # 얼굴 특징 벡터를 추출하지 못해도 200 OK를 반환
+                        content={"message": f"얼굴 특징 추출 중 오류 발생 - {str(e)}"},
+                        status_code=500,
                     )
-            except Exception as e:
-                return JSONResponse(
-                    content={"message": f"얼굴 특징 추출 중 오류 발생 - {str(e)}"},
-                    status_code=500,
-                )
 
-        for score, (x1, y1, x2, y2) in faces_info:
-            if (x1, y1, x2, y2) != most_similar_image_rect:
-                face = rgb_image[y1:y2, x1:x2]
-                center_x, center_y = (x2 - x1) // 2, (y2 - y1) // 2
-                radius = max(center_x, center_y)
-                mask = np.zeros((y2 - y1, x2 - x1), dtype=np.uint8)
-                cv2.circle(mask, (center_x, center_y), radius, (255, 255, 255), -1)
-                blurred_face = cv2.GaussianBlur(face, (99, 99), 50)
-                face = np.where(mask[:, :, None] == 255, blurred_face, face)
-                rgb_image[y1:y2, x1:x2] = face
+            # 얼굴 블러 처리
+            for score, (x1, y1, x2, y2) in faces_info:
+                if (x1, y1, x2, y2) != most_similar_image_rect:
+                    face = rgb_image[y1:y2, x1:x2]
+                    center_x, center_y = (x2 - x1) // 2, (y2 - y1) // 2
+                    radius = max(center_x, center_y)
+                    mask = np.zeros((y2 - y1, x2 - x1), dtype=np.uint8)
+                    cv2.circle(mask, (center_x, center_y), radius, (255, 255, 255), -1)
+                    blurred_face = cv2.GaussianBlur(face, (99, 99), 50)
+                    face = np.where(mask[:, :, None] == 255, blurred_face, face)
+                    rgb_image[y1:y2, x1:x2] = face
 
-        _, img_encoded = cv2.imencode(".jpg", rgb_image)
-        print("이미지 처리 및 인코딩 성공")
-        return JSONResponse(
-            content={
-                "message": "성공적으로 처리되었습니다.",
-                "image": base64.b64encode(img_encoded).decode("utf-8"),
-            },
-            status_code=200,
-        )
+            # 유해물질 감지 및 처리
+            if is_mosaic_enabled:
+                print("유해물질 모자이크 처리를 시작합니다.")
+                results = model_dangerous(rgb_image)
+                for result in results:
+                    if len(result.boxes) > 0:
+                        for box in result.boxes:
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+
+                            # 유해물질 영역 크롭
+                            dangerous_area = rgb_image[y1:y2, x1:x2]
+
+                            # 중앙과 반지름 계산
+                            center_x, center_y = (x2 - x1) // 2, (y2 - y1) // 2
+                            radius = max(center_x, center_y)
+
+                            # 원형 마스크 생성
+                            mask = np.zeros((y2 - y1, x2 - x1), dtype=np.uint8)
+                            cv2.circle(mask, (center_x, center_y), radius, (255, 255, 255), -1)
+
+                            # 유해물질 영역을 블러 처리
+                            blurred_area = cv2.GaussianBlur(dangerous_area, (99, 99), 50)
+                            dangerous_area = np.where(mask[:, :, None] == 255, blurred_area, dangerous_area)
+
+                            # 원본 이미지에 블러 처리된 유해물질 적용
+                            rgb_image[y1:y2, x1:x2] = dangerous_area
+
+            _, img_encoded = cv2.imencode(".jpg", rgb_image)
+            return JSONResponse(
+                content={
+                    "message": "성공적으로 처리되었습니다.",
+                    "image": base64.b64encode(img_encoded).decode("utf-8"),
+                },
+                status_code=200,
+            )
 
     else:
-        # 얼굴이 탐지되지 않았을 때, 원본 이미지를 RGB로 변환한 후 반환
-        _, img_encoded = cv2.imencode(".jpg", rgb_image)
-        print("얼굴이 탐지되지 않았으므로 원본 이미지를 반환합니다.")
-        return JSONResponse(
-            content={
-                "message": "얼굴이 탐지되지 않았습니다.",
-                "image": base64.b64encode(img_encoded).decode("utf-8"),
-            },
-            status_code=200,
-        )
+            _, img_encoded = cv2.imencode(".jpg", rgb_image)
+            return JSONResponse(
+                content={
+                    "message": "얼굴이 탐지되지 않았습니다.",
+                    "image": base64.b64encode(img_encoded).decode("utf-8"),
+                },
+                status_code=200,
+            )
 
 @app.post("/reset_cache")
 async def reset_cache():
