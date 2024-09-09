@@ -12,8 +12,9 @@ class BroadcastScreen extends StatefulWidget {
   final Uint8List? imageBytes;
   final String userId;
   final String serverIp;
+  final bool isMosaicEnabled;
 
-  BroadcastScreen({this.imageBytes, required this.userId, required this.serverIp});
+  BroadcastScreen({this.imageBytes, required this.userId, required this.serverIp, required this.isMosaicEnabled});
 
   @override
   _BroadcastScreenState createState() => _BroadcastScreenState();
@@ -172,6 +173,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     } else {
       _socket!.emit('start_recording', {
         'userId': widget.userId,
+        'isMosaicEnabled': widget.isMosaicEnabled,  // 모자이크 여부 전달
       });
       setState(() {
         isRecording = true;

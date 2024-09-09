@@ -43,8 +43,8 @@ async def process_image(request: Request):
     data = await request.json()
     signed_url = data.get("signedUrl")
     image_data = data.get("image")
-    is_mosaic_enabled = data.get("isMosaicEnabled", "false") == "true"
-
+    # isMosaicEnabled 값을 Boolean으로 처리
+    is_mosaic_enabled = data.get("isMosaicEnabled", False)
     print("모자이크 여부 :",is_mosaic_enabled)
 
     if signed_url:
@@ -63,7 +63,7 @@ async def process_image(request: Request):
         reference_image = cached_image
         # 참조 이미지에서 얼굴 검출 및 인코딩
         if reference_encoding is None:
-            boxes, _, _ = model(reference_image, target_size=512)
+            boxes, _, _ = model_face(reference_image, target_size=512)
             if len(boxes) > 0:
                 box = boxes[0]
                 x1, y1, x2, y2 = map(int, box)
