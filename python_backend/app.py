@@ -1,102 +1,117 @@
-from fastapi import FastAPI, UploadFile, File
-import subprocess
-import torch
-import whisper
-import contextlib
-import wave
-from fastapi.middleware.cors import CORSMiddleware
-from pyannote.audio.pipelines.speaker_verification import PretrainedSpeakerEmbedding
-from pyannote.audio import Audio
-from pyannote.core import Segment
-from sklearn.cluster import AgglomerativeClustering
+from fastapi import FastAPI, File, UploadFile
+from pydub import AudioSegment
+from google.cloud import speech_v1
 import numpy as np
-import datetime
+import io
+import os
+import subprocess
 
 app = FastAPI()
 
-# CORS 설정 추가
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 모든 출처 허용
-    allow_credentials=True,
-    allow_methods=["*"],  # 모든 HTTP 메서드 허용
-    allow_headers=["*"],  # 모든 HTTP 헤더 허용
-)
+# Initialize Google Cloud Speech-to-Text client
+client = speech_v1.SpeechClient()
 
-# Initialize models as global variables
-model = None
-embedding_model = None
-audio = None
+# Define swear words list
+swear_words = ['씨발', '미친', '개새끼', '존나', '년', '놈','시발']
 
-@app.on_event("startup")
-async def startup_event():
-    global model, embedding_model, audio
-    model = whisper.load_model("medium", device="cpu")
-    embedding_model = PretrainedSpeakerEmbedding("speechbrain/spkrec-ecapa-voxceleb", device=torch.device("cpu"))
-    audio = Audio()
+# Function to process audio and replace swear words with beeps
+def sample_recognize(audio_content):
+    language_code = "ko-KR"
+    sample_rate_hertz = 44100
+    encoding = speech_v1.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED
 
-def segment_embedding(segment, path, duration):
-    start = segment["start"]
-    end = min(duration, segment["end"])
-    clip = Segment(start, end)
-    waveform, sample_rate = audio.crop(path, clip)
-    return embedding_model(waveform[None])
+    config = {
+        "language_code": language_code,
+        "sample_rate_hertz": sample_rate_hertz,
+        "encoding": encoding,
+        "enable_word_time_offsets": True,
+        "use_enhanced": True,
+    }
 
-def time(secs):
-    return str(datetime.timedelta(seconds=round(secs)))
+    audio = {"content": audio_content}
+    response = client.recognize(config=config, audio=audio)
 
-@app.post("/transcribe/")
-async def transcribe(file: UploadFile = File(...), num_speakers: int = 2):
-    # Save uploaded file
-    file_location = f"temp_{file.filename}"
-    with open(file_location, "wb+") as f:
+    timeline, swear_timeline, words = [], [], []
+    transcript_list = []
+
+    for result in response.results:
+        alternative = result.alternatives[0]
+        for word in alternative.words:
+            start_time = word.start_time.total_seconds() * 1000
+            end_time = word.end_time.total_seconds() * 1000
+            timeline.append([int(start_time), int(end_time)])
+
+            if any(swear in word.word for swear in swear_words):
+                swear_timeline.append([int(start_time), int(end_time)])
+                transcript_list.append("**")
+            else:
+                transcript_list.append(word.word)
+
+    transcript = ' '.join(transcript_list)
+    return timeline, swear_timeline, transcript
+
+# Function to create beep sound
+def create_beep(duration):
+    sps = 44100
+    freq_hz = 1000.0
+    vol = 0.5
+
+    esm = np.arange(duration / 1000 * sps)
+    wf = np.sin(2 * np.pi * esm * freq_hz / sps)
+    wf_quiet = wf * vol
+    wf_int = np.int16(wf_quiet * 32767)
+
+    beep = AudioSegment(
+        wf_int.tobytes(),
+        frame_rate=sps,
+        sample_width=wf_int.dtype.itemsize,
+        channels=1
+    )
+    return beep
+
+@app.post("/process-audio/")
+async def process_audio(file: UploadFile = File(...)):
+    # Save uploaded MP4 file
+    mp4_file_location = f"temp_{file.filename}"
+    with open(mp4_file_location, "wb+") as f:
         f.write(file.file.read())
 
-    # Check if the file is in MP4 format and convert to WAV
-    if file_location[-3:] == 'mp4':
-        subprocess.call(['ffmpeg', '-i', file_location, 'temp_audio.wav', '-y'])
-        file_location = 'temp_audio.wav'
+    # Convert MP4 to WAV using ffmpeg
+    wav_file_location = "temp_audio.wav"
+    subprocess.call(['ffmpeg', '-i', mp4_file_location, '-ac', '1', wav_file_location, '-y'])
 
-    subprocess.call(['ffmpeg', '-i', file_location, '-ac', '1', 'audio_mono.wav', '-y'])
-    path = 'audio_mono.wav'
+    # Load the converted WAV file using pydub
+    audio = AudioSegment.from_file(wav_file_location, format="wav")
 
-    # Load Whisper model and transcribe
-    result = model.transcribe(path)
-    segments = result["segments"]
+    # Read the WAV file content for STT processing
+    with open(wav_file_location, "rb") as f:
+        audio_content = f.read()
 
-    # Get duration and process embeddings
-    with contextlib.closing(wave.open(path, 'r')) as f:
-        frames = f.getnframes()
-        rate = f.getframerate()
-        duration = frames / float(rate)
+    # Run speech-to-text with swear detection
+    timeline, swear_timeline, transcript = sample_recognize(audio_content)
 
-    embeddings = np.zeros((len(segments), 192))
-    for i, segment in enumerate(segments):
-        embeddings[i] = segment_embedding(segment, path, duration)
+    # Process and overlay beep on detected swear words
+    mixed_final = audio
+    for i in range(len(swear_timeline)):
+        duration = swear_timeline[i][1] - swear_timeline[i][0]
+        if duration > 0:
+            beep = create_beep(duration=duration)
+            mixed_final = mixed_final.overlay(beep, position=swear_timeline[i][0], gain_during_overlay=-20)
 
-    # Clustering
-    clustering = AgglomerativeClustering(num_speakers).fit(embeddings)
-    labels = clustering.labels_
+    # Save the processed audio to a temporary file
+    output_path = "processed_audio.mp3"
+    mixed_final.export(output_path, format="mp3")
 
-    # Assign speaker labels to segments
-    for i, segment in enumerate(segments):
-        segment['speaker'] = labels[i] + 1
+    # Cleanup temporary files
+    os.remove(mp4_file_location)
+    os.remove(wav_file_location)
 
-    transcript = []
-    for i, segment in enumerate(segments):
-        if i == 0 or segments[i - 1]["speaker"] != segment["speaker"]:
-            speaker_info = f"SPEAKER {segment['speaker']} {time(segment['start'])}"
-        else:
-            speaker_info = None
-        transcript.append({
-            "start": segment["start"],
-            "end": segment["end"],
-            "speaker": speaker_info,
-            "text": segment["text"][1:]
-        })
-    print(transcript)
-    return {"transcript": transcript}
+    # Return processed audio and transcript as response
+    return {
+        "transcript": transcript,
+        "file_path": output_path,
+        "message": "Audio processed successfully."
+    }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5003)
+# To run the FastAPI server, use the following command in your terminal:
+# uvicorn main:app --reload
