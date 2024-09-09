@@ -33,7 +33,7 @@ class _BroadReshowState extends State<BroadReshow> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset('assets/video1.mp4')
+    _controller = VideoPlayerController.asset('assets/prevideo.mp4')
       ..initialize().then((_) {
         setState(() {});
       });
@@ -53,13 +53,13 @@ class _BroadReshowState extends State<BroadReshow> {
 
     try {
       // Load the asset file
-      final ByteData data = await rootBundle.load('assets/video1.mp4');
+      final ByteData data = await rootBundle.load('assets/prevideo.mp4');
       final Uint8List bytes = data.buffer.asUint8List();
 
       // Send the file to the server
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5003/transcribe/'),
+        Uri.parse('http://localhost:8000/process-and-analyze/'),
       )..files.add(
           http.MultipartFile.fromBytes('file', bytes, filename: 'video1.mp4'),
         );

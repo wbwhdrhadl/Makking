@@ -35,6 +35,25 @@ class BroadcastStorageScreen extends StatelessWidget {
         );
       },
     ),
+    LiveStreamTile(
+      profileImage: 'assets/na.jpeg',
+      streamerName: 'makking의 인터뷰',
+      description: 'makking 앱은 무엇인가요?',
+      viewers: 56880,
+      thumbnail: 'assets/na.jpeg',
+      broadcastName: '인터뷰tv',
+      userId: 'exampleUserId',
+      serverIp: '192.168.1.115',
+      onTap: (BuildContext context, String userId, String serverIp) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BroadReshow(
+                broadcastName: 'example', userId: userId, serverIp: serverIp),
+          ),
+        );
+      },
+    ),
   ];
 
   @override

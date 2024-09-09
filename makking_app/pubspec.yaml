@@ -88,6 +88,8 @@ flutter:
     - assets/default_profile.png
     - assets/default_img.png
     - assets/eyes.png
+    - assets/na.jpeg
+    - assets/prevideo.mp4
 
 
   # To add assets to your application, add an assets section, like this:
