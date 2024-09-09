@@ -6,7 +6,7 @@ import io
 import os
 from moviepy.editor import VideoFileClip
 
-blind = FastAPI()
+app = FastAPI()
 
 # Google Cloud Speech API 클라이언트 생성
 client = speech_v1.SpeechClient()
@@ -65,11 +65,18 @@ def create_beep(duration):
     )
     return beep
 
-# 영상에서 오디오 추출 함수
+# 영상에서 오디오 추출 함수 (모노로 변환)
 def extract_audio_from_video(video_path, output_audio_path="temp_audio.wav"):
     video = VideoFileClip(video_path)
     audio = video.audio
     audio.write_audiofile(output_audio_path, codec='pcm_s16le')
+
+    # 오디오 파일을 모노로 변환
+    sound = AudioSegment.from_file(output_audio_path)
+    sound = sound.set_channels(1)  # 모노로 변환
+    
+    # 변환한 오디오 다시 저장
+    sound.export(output_audio_path, format="wav")
     return output_audio_path
 
 @app.post("/process-video/")
@@ -79,7 +86,7 @@ async def process_video(file: UploadFile = File(...)):
     with open(video_file_path, "wb") as f:
         f.write(await file.read())
 
-    # 영상에서 오디오 추출
+    # 영상에서 오디오 추출 (모노로 변환)
     audio_file_path = extract_audio_from_video(video_file_path)
 
     # 추출된 오디오 파일을 Google Speech API로 분석
