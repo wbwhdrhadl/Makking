@@ -187,7 +187,14 @@ io.on("connection", (socket) => {
         recordingInProgress = true; // 녹화 시작 상태로 설정
 
         userId = data.userId;
+        const isMosaicEnabled = data.isMosaicEnabled;
+
         console.log("Received userId:", userId);
+        console.log("isMosaicEnabled:", isMosaicEnabled);
+
+        if (isMosaicEnabled) {
+                console.log("모자이크가 활성화되었습니다.");
+            }
 
         if (!userId) {
             console.error("userId가 누락되었습니다.");
@@ -203,9 +210,9 @@ io.on("connection", (socket) => {
 
         if (!signedUrlSent && data.signedUrl) {
             try {
-                await axios.post("http://localhost:5003/process_image", { signedUrl: data.signedUrl });
+                await axios.post("http://localhost:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
                 console.log("Signed URL successfully sent to model server.");
-                signedUrlSent = true;
+                signedUrlSent = true
             } catch (error) {
                 console.error("Error sending signed URL to model server:", error);
             }

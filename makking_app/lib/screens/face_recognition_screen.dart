@@ -79,8 +79,11 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
         filename: 'face_image.png',
       ));
 
+      uploadRequest.fields['isMosaicEnabled'] = widget.isMosaicEnabled.toString(); // 모자이크 여부 전달
+
       final uploadResponse = await uploadRequest.send();
       final responseBody = await uploadResponse.stream.bytesToString();
+      print('Upload Response: $responseBody');  // 서버 응답을 먼저 확인
       final responseJson = json.decode(responseBody);
 
       if (uploadResponse.statusCode == 200) {
@@ -99,10 +102,11 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
         showErrorDialog('이미지 업로드 실패: ${responseJson['message']}');
       }
     } catch (e) {
+      print('JSON 파싱 오류: $e'); // JSON 파싱 중 오류가 발생한 경우 로그 출력
       showErrorDialog('서버 요청 중 오류 발생: $e');
     } finally {
       setState(() {
-        isLoading = false;
+      isLoading = false;
       });
     }
   }
