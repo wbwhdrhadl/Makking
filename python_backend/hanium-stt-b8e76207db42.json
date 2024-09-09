@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "hanium-stt",
+  "private_key_id": "b8e76207db4251610de44a13e742f8bc1d787b97",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCT8OLNyA9QFOdv\nSzYqAsdld33L3pHxHn06QytqUP6GmBbHVnI0yR3Liej9xDlA3kYYV9Om5HA817HP\nbQOGIXGOnxgJ8y8oTniBEtIAAntWfplVWfMSnEw6AN4FShgtdBrBuT0se0lDBftG\nTu3zy8vRR7plH/hgCPcKqM+it+FEGlBIEHAwmKEyjzHJH7OZvzlB4JQ3S2hGhatC\nkf3DI7sBVYuJqdGzheqfTwb5Ep0sfmPmZqKeTu2mXQWyL+FTH6vFSILltkPgMx0t\ntK5BnajEkj2vOrTSUehUhgqMA8NmzvJtuTDbpp2KqzacQhiCropAfam0hzJIaew0\nVODFkHxNAgMBAAECggEABZeE0yISkMSBgkpAUrKGhpYk1J27PCHFZPw1+g+erJ1i\nEF3QSkt8df2RUh+RHxu9Ct2C/AYax0n13XEcQX0mdYLGSKtUUdHe1IN5buj+cCSv\n4giDhhAPV4qXLxxVBp7NW3Dc2D9pY6r9tkjJzhMax0nOnf+T2/lqxmXewffw//8Z\n5VxP3OeeLk+RBZ/Z39oj/Db2x5g93PgD/VXgg1Z6CkHC2HB9NqQPppwvpsXS5C8z\nYw1/XQpsfgU7NjmtWzvpXoWv6PRAnYMq5jaiP2cLapTjvungpagHLxtg+X7Z3FK3\nfYh/GW/shP1XJ6dEag6R96OBW0n6qW+vJz7twZ1WwQKBgQDMT5INaGBbtnm2wxEA\nHBEyJOqP9UUiNVQ/9kRAZ3qX4kaXoD5+qkVARxfENO0t7MvasrVOlvS/9OqGvowI\nB66i1S04FnJxJh1qh85VOwv/o2chg1jx1JnE9/Uy1eucEM5zQFfbkZ6cvAQ8xtWW\nQ1HfrCQxTYBQyKCwlmx/oVQlLQKBgQC5XnSUXWGm2/YiCsXPM1bs+2n4ExHaQfvf\nw8hxFdXzCtLUnMFTOrnXJMjhNr1rUibpN3WfEdRGnzxR2Lr9SOYuhwjVyuP26+s/\n90MwY/qXNB4bR2SfimdkMidjlT+/zUUegffxctmFJeOSeSVVEejVIrVgwgnDKMTq\n6ZlAlXBnoQKBgFb39ArDCGlhxnO2mzD5wZQfxL0cwZ3rJ37GnIzxv2yRxEzcyF1w\nq2POH17EzMVEzA2/DpByj6J6Za6Pw9nTM1Ja/hGm9HYXrGPhhUIgjV33N3o7iAwA\n3KfMiNJn3xAi006Z8Awl82dyXTdlyBtbcqmMhCd8fwdkL4qbrXmyubfNAoGADQCg\nIswODns9X5Pr3iXWwha8jycfSHT6au67v5rtf/fRZBJ+yQzEfl/ZK1sAnGeNzSwT\ntw20GyQOQht2uk+Dvd3A8+YgaXCQ9tKsRtesezCvr/ApEbvOlsuh0a1lZFnMsGAj\neS86LMnElcCjqrzv3QtrN5dEwgi5D1VFZ69TzCECgYAXnFXhmImTznjhfSmmLYy6\n2rcS6shd6YbjLmzrz98tUaOFhQBlELOnnm66L5KTevZrYa3t1MVLBd9qbQrJsygu\n+SIqcVW1h8v3BoC8MHI/fvi7UpbQB5GUMkm74WXXJSfRPvUU46lU/F7TJQ21nHcL\nMIlNr9FUWSPRkXS38Lbmew==\n-----END PRIVATE KEY-----\n",
+  "client_email": "yerinjung@hanium-stt.iam.gserviceaccount.com",
+  "client_id": "105341998761208702594",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/yerinjung%40hanium-stt.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
