@@ -37,6 +37,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   @override
   void initState() {
     super.initState();
+    print('Mosaic enabled: ${widget.isMosaicEnabled}');  // 값이 제대로 들어오는지 확인
     socket = IO.io('http://${widget.serverIp}:5001', <String, dynamic>{
       'transports': ['websocket'],
     });
@@ -131,7 +132,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
           final response = await http.post(
             sendUrlUri,
             headers: {'Content-Type': 'application/json'},
-            body: json.encode({'signedUrl': signedUrl}),
+            body: json.encode({'signedUrl': signedUrl,'isMosaicEnabled': widget.isMosaicEnabled }),
           );
 
           if (response.statusCode == 200) {
@@ -188,6 +189,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
               imageBytes: null,
               userId: widget.userId,
               serverIp: widget.serverIp, // 서버 IP 전달
+              isMosaicEnabled: widget.isMosaicEnabled,  // 모자이크 여부 전달
             ),
           ),
         );

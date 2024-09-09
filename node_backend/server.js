@@ -189,6 +189,7 @@ io.on("connection", (socket) => {
         userId = data.userId;
         const isMosaicEnabled = data.isMosaicEnabled;
 
+        console.log("Received data:", data);  // 데이터를 모두 출력
         console.log("Received userId:", userId);
         console.log("isMosaicEnabled:", isMosaicEnabled);
 
