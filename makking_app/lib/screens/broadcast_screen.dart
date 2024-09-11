@@ -173,7 +173,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     } else {
       _socket!.emit('start_recording', {
         'userId': widget.userId,
-        'isMosaicEnabled': widget.isMosaicEnabled,  // 모자이크 여부 전달
+        'isMosaicEnabled': widget.isMosaicEnabled,
       });
       setState(() {
         isRecording = true;

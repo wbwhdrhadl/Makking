@@ -58,3 +58,4 @@ venv/
 makking_app/pubspec.lock
 .env
 
+/makking_app/build

@@ -91,6 +91,8 @@ function startFFmpeg(userId) {
         "-hls_list_size", "20",
         "-hls_flags", "delete_segments",
         "-f", "hls",
+        "-threads", "4",  // 스레드 사용 설정
+        "-crf", "28",  // 품질-속도 균형 설정
         outputFilePath
     ]);
 
