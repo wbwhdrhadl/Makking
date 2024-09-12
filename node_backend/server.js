@@ -78,7 +78,7 @@ function startFFmpeg(userId) {
         "-s", "320x240",
         "-r", "3",
         "-i", "-",
-        "-c:v", "libx264",
+        "-c:v", "h264_qsv",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
         "-profile:v", "baseline",
