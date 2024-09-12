@@ -11,7 +11,7 @@ router.post('/sendSignedUrl', async (req, res) => {
 
   try {
     // 모델 서버에 서명된 URL과 isMosaicEnabled 전송
-    const response = await axios.post('http://localhost:5003/process_image', {
+    const response = await axios.post('http://54.180.151.241:5003/process_image', {
       signedUrl: signedUrl,
       isMosaicEnabled: isMosaicEnabled, // 모자이크 여부도 함께 전송
     });

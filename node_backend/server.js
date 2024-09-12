@@ -76,9 +76,9 @@ function startFFmpeg(userId) {
         "-vcodec", "mjpeg",
         "-pix_fmt", "yuvj420p",
         "-s", "320x240",
-        "-r", "3",
+        "-r", "2",
         "-i", "-",
-        "-c:v", "h264_qsv",
+        "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
         "-profile:v", "baseline",
@@ -213,7 +213,7 @@ io.on("connection", (socket) => {
 
         if (!signedUrlSent && data.signedUrl) {
             try {
-                await axios.post("http://localhost:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
+                await axios.post("http://54.180.151.241:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
                 console.log("Signed URL successfully sent to model server.");
                 signedUrlSent = true
             } catch (error) {
@@ -237,7 +237,7 @@ io.on("connection", (socket) => {
 
     socket.on("stream_image", async (imageBase64) => {
         try {
-            const response = await axios.post("http://localhost:5003/process_image", { image: imageBase64 });
+            const response = await axios.post("http://54.180.151.241:5003/process_image", { image: imageBase64 });
             if (response.data.image) {
                 videoBuffer.push(Buffer.from(response.data.image, "base64"));
                 isVideoReady = true;
