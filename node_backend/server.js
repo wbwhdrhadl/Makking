@@ -40,6 +40,11 @@ const connection = mongoose.createConnection(mongoURI, {
     useUnifiedTopology: true,
 });
 
+const instance = axios.create({
+  baseURL: 'http://3.36.104.253:5003',
+  timeout: 120000,  // 타임아웃 시간 설정 (예: 60초)
+});
+
 let gfs;
 connection.once('open', () => {
     gfs = new mongoose.mongo.GridFSBucket(connection.db, {
@@ -76,7 +81,7 @@ function startFFmpeg(userId) {
         "-vcodec", "mjpeg",
         "-pix_fmt", "yuvj420p",
         "-s", "320x240",
-        "-r", "2",
+        "-r", "5",
         "-i", "-",
         "-c:v", "libx264",
         "-preset", "ultrafast",
@@ -92,7 +97,7 @@ function startFFmpeg(userId) {
         "-hls_flags", "delete_segments",
         "-f", "hls",
         "-threads", "4",  // 스레드 사용 설정
-        "-crf", "28",  // 품질-속도 균형 설정
+        "-crf", "20",  // 품질-속도 균형 설정
         outputFilePath
     ]);
 
@@ -213,7 +218,7 @@ io.on("connection", (socket) => {
 
         if (!signedUrlSent && data.signedUrl) {
             try {
-                await axios.post("http://54.180.151.241:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
+                await axios.post("http://3.36.104.253:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
                 console.log("Signed URL successfully sent to model server.");
                 signedUrlSent = true
             } catch (error) {
@@ -237,15 +242,17 @@ io.on("connection", (socket) => {
 
     socket.on("stream_image", async (imageBase64) => {
         try {
-            const response = await axios.post("http://54.180.151.241:5003/process_image", { image: imageBase64 });
+            const data = { image: imageBase64 };  // 데이터를 명확하게 정의
+            const response = await instance.post("/process_image", data);  // axios로 POST 요청 전송
             if (response.data.image) {
+                // 서버로부터 받은 데이터를 처리
                 videoBuffer.push(Buffer.from(response.data.image, "base64"));
-                isVideoReady = true;
             } else {
+                // 받은 데이터가 없다면 원본 이미지를 그대로 사용
                 videoBuffer.push(Buffer.from(imageBase64, "base64"));
-                isVideoReady = true;
             }
-            attemptSyncAndStream();
+            isVideoReady = true;
+            attemptSyncAndStream();  // 스트리밍 시작
         } catch (error) {
             console.error("Error processing image:", error);
         }
