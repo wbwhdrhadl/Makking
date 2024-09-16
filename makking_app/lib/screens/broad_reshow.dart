@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart'; // For rootBundle
@@ -59,7 +60,7 @@ class _BroadReshowState extends State<BroadReshow> {
       // Send the file to the server
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:8000/process-and-analyze/'),
+        Uri.parse('http://localhost:5003/process-and-analyze/'),
       )..files.add(
           http.MultipartFile.fromBytes('file', bytes, filename: 'video1.mp4'),
         );
@@ -120,10 +121,25 @@ class _BroadReshowState extends State<BroadReshow> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Scaffold 배경색을 검은색으로 설정
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.broadcastName),
-        backgroundColor: Colors.black, // AppBar 배경색을 검은색으로 설정
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.live_tv, color: Colors.greenAccent, size: 30),
+            SizedBox(width: 10),
+            Text(
+              widget.broadcastName,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white, // 글자 색상을 흰색으로 설정
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.black,
+        elevation: 0,
       ),
       body: Center(
         child: Column(
@@ -145,12 +161,30 @@ class _BroadReshowState extends State<BroadReshow> {
                   child: Stack(
                     children: [
                       Center(
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          child: SizedBox(
-                            width: _controller.value.size.width,
-                            height: _controller.value.size.height,
-                            child: VideoPlayer(_controller),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border:
+                                Border.all(color: Colors.greenAccent, width: 6),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black45,
+                                spreadRadius: 5,
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: SizedBox(
+                              width: _controller.value.size.width,
+                              height: _controller.value.size.height,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: VideoPlayer(_controller),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -171,8 +205,7 @@ class _BroadReshowState extends State<BroadReshow> {
                     CircularProgressIndicator(),
                     SizedBox(height: 10),
                     Text('자막 생성 중입니다. 잠시만 기다려 주세요.',
-                        style:
-                            TextStyle(color: Colors.white)), // Text 색상을 흰색으로 설정
+                        style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -262,21 +295,21 @@ class _BroadReshowState extends State<BroadReshow> {
           },
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), // Rounded corners
+              borderRadius: BorderRadius.circular(30), // 버튼 모서리를 둥글게
             ),
-            padding: EdgeInsets.symmetric(
-                vertical: 16, horizontal: 24), // Button padding
-            elevation: 8, // Shadow effect
-            shadowColor: Colors.black.withOpacity(0.3), // Shadow color
-            backgroundColor:
-                Color.fromARGB(255, 13, 203, 105), // 버튼 배경색을 검은색으로 설정
+            padding:
+                EdgeInsets.symmetric(vertical: 16, horizontal: 32), // 여유 있는 패딩
+            elevation: 12, // 버튼의 그림자 깊이
+            shadowColor: Colors.black.withOpacity(0.2), // 은은한 그림자 색상
+            backgroundColor: Colors.tealAccent.shade400, // 세련된 민트색
           ),
           child: Text(
             '자막 생성하기',
             style: TextStyle(
-              fontSize: 18, // Font size
-              fontWeight: FontWeight.bold, // Font weight
-              color: Colors.black, // 글자색을 흰색으로 설정
+              fontSize: 18, // 텍스트 크기
+              fontWeight: FontWeight.w600, // 약간 굵게
+              color: Colors.black87, // 텍스트 색상: 검은색에 가까운 회색
+              letterSpacing: 1.2, // 글자 사이 간격
             ),
           ),
         ),

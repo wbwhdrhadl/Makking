@@ -145,7 +145,8 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                             fontSize: 18, color: Colors.white)),
                     subtitle: Text(broadcast['title'],
                         style: GoogleFonts.doHyeon(
-                            fontSize: 14, color: Colors.grey[300])),
+                            fontSize: 14,
+                            color: Color.fromARGB(255, 255, 255, 255))),
                   ),
                   Container(
                     height: 150,
@@ -255,8 +256,8 @@ class CustomSearchDelegate extends SearchDelegate {
             TextStyle(color: Colors.white, fontSize: 20), // 검색어 텍스트 색상 흰색으로 설정
       ),
       inputDecorationTheme: InputDecorationTheme(
-        hintStyle: TextStyle(color: Colors.grey), // 검색창 힌트 텍스트 색상
-        // 검색창에 사용자가 입력하는 글씨 색상을 흰색으로 설정
+        hintStyle: TextStyle(
+            color: const Color.fromARGB(255, 255, 255, 255)), // 검색창 힌트 텍스트 색상
         filled: true,
         fillColor: Colors.black, // 검색창 배경을 검정색으로 설정
         border: InputBorder.none, // 검색창의 기본 테두리 제거
@@ -267,6 +268,12 @@ class CustomSearchDelegate extends SearchDelegate {
       ),
     );
   }
+
+  @override
+  TextStyle? get searchFieldStyle => TextStyle(
+        color: Colors.white, // 검색 텍스트 색상을 흰색으로 설정
+        fontSize: 18, // 원하는 경우 폰트 크기도 설정
+      );
 
   @override
   List<Widget> buildActions(BuildContext context) {

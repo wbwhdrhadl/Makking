@@ -30,7 +30,7 @@ class BroadcastStorageScreen extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => BroadReshow(
-                broadcastName: 'example', userId: userId, serverIp: serverIp),
+                broadcastName: '곰이tv', userId: userId, serverIp: serverIp),
           ),
         );
       },
@@ -380,13 +380,19 @@ class CustomSearchDelegate extends SearchDelegate {
             TextStyle(color: Colors.white, fontSize: 20), // 검색어 텍스트 색상 흰색으로 설정
       ),
       inputDecorationTheme: InputDecorationTheme(
-        hintStyle: TextStyle(color: Colors.grey), // 검색창 힌트 텍스트 색상
+        hintStyle: TextStyle(color: Colors.white), // 검색창 힌트 텍스트 색상
       ),
       textTheme: TextTheme(
         headlineSmall: TextStyle(color: Colors.white),
       ),
     );
   }
+
+  @override
+  TextStyle? get searchFieldStyle => TextStyle(
+        color: Colors.white, // 검색 텍스트 색상을 흰색으로 설정
+        fontSize: 18, // 원하는 경우 폰트 크기도 설정
+      );
 
   @override
   List<Widget> buildActions(BuildContext context) {
