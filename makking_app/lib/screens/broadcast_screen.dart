@@ -29,7 +29,6 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
   List<String> comments = [];
   int likes = 0;
   bool _isKeyboardVisible = false;
-  int frameCount = 0;  // 프레임 카운트를 추가
 
   @override
   void initState() {
@@ -103,29 +102,28 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     });
   }
 
-    void startStreaming() {
-      if (_cameraController?.value.isInitialized ?? false) {
-        _cameraController!.startImageStream((CameraImage image) {
-          // 매 2번째 프레임만 처리하도록 변경
-          if (frameCount % 2 == 0) {
-            processImage(image);
-          }
-          frameCount++;
-        });
-      }
+  void startStreaming() {
+    if (_cameraController?.value.isInitialized ?? false) {
+      _cameraController!.startImageStream((CameraImage image) {
+        if (!isStreaming) {
+          setState(() => isStreaming = true);
+          processImage(image);
+        }
+      });
     }
+  }
 
-    Future<void> processImage(CameraImage image) async {
-      var img = await compute(convertYUV420toImage, image);
-      if (img != null && _socket != null && _socket!.connected) {
-        final resizedImg = imglib.copyResize(img, width: 640, height: 480);
-        List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
-        String imageBase64 = base64Encode(Uint8List.fromList(jpg));
+  Future<void> processImage(CameraImage image) async {
+    var img = await compute(convertYUV420toImage, image);
+    if (img != null && _socket != null && _socket!.connected) {
+      final resizedImg = imglib.copyResize(img, width: 640, height: 480);
+      List<int> jpg = imglib.encodeJpg(resizedImg, quality: 70);
+      String imageBase64 = base64Encode(Uint8List.fromList(jpg));
 
-        _socket!.emit('stream_image', imageBase64);
-      }
-      setState(() => isStreaming = false);
+      _socket!.emit('stream_image', imageBase64);
     }
+    setState(() => isStreaming = false);
+  }
 
   static imglib.Image? convertYUV420toImage(CameraImage image) {
     try {
