@@ -77,6 +77,7 @@ function startFFmpeg(userId) {
 
     const outputFilePath = path.join(userStreamDir, "output.m3u8");
     ffmpeg = spawn("ffmpeg", [
+        "-re",
         "-f", "image2pipe",
         "-vcodec", "mjpeg",
         "-pix_fmt", "yuvj420p",
