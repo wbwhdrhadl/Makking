@@ -41,7 +41,7 @@ const connection = mongoose.createConnection(mongoURI, {
 });
 
 const instance = axios.create({
-  baseURL: 'http://3.36.104.253:5003',
+  baseURL: 'http://43.202.253.68:5003',
   timeout: 120000,  // 타임아웃 시간 설정 (예: 60초)
 });
 
@@ -218,7 +218,7 @@ io.on("connection", (socket) => {
 
         if (!signedUrlSent && data.signedUrl) {
             try {
-                await axios.post("http://3.36.104.253:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
+                await axios.post("http://43.202.253.68:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
                 console.log("Signed URL successfully sent to model server.");
                 signedUrlSent = true
             } catch (error) {

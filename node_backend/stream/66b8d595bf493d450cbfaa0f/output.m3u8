@@ -12,6 +12,14 @@ output2.ts
 output3.ts
 #EXTINF:6.000000,
 output4.ts
-#EXTINF:5.400000,
+#EXTINF:6.000000,
 output5.ts
+#EXTINF:6.000000,
+output6.ts
+#EXTINF:6.000000,
+output7.ts
+#EXTINF:6.000000,
+output8.ts
+#EXTINF:1.600000,
+output9.ts
 #EXT-X-ENDLIST
