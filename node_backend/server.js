@@ -16,7 +16,7 @@ const fs = require("fs");
 const { spawn } = require("child_process");
 const { GridFSBucket } = require("mongodb");
 const { Broadcast, router: broadSettingRouter } = require("./routes/broadSetting.js");
-const { Message, router: MessageRouter, initSocket} = require('./routes/broaddetail.js');
+const { Message, router: MessageRouter, initSocket } = require('./routes/broaddetail.js');
 
 app.use('/stream', express.static(path.join(__dirname, 'stream')));
 app.use(cors({
@@ -41,8 +41,8 @@ const connection = mongoose.createConnection(mongoURI, {
 });
 
 const instance = axios.create({
-  baseURL: 'http://43.202.253.68:5003',
-  timeout: 120000,  // 타임아웃 시간 설정 (예: 60초)
+    baseURL: 'http://43.201.248.85:5003',
+    timeout: 120000,  // 타임아웃 시간 설정 (예: 60초)
 });
 
 let gfs;
@@ -57,8 +57,8 @@ mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
-.then(() => console.log("MongoDB 연결 성공"))
-.catch((err) => console.log("MongoDB 연결 오류:", err));
+    .then(() => console.log("MongoDB 연결 성공"))
+    .catch((err) => console.log("MongoDB 연결 오류:", err));
 
 const streamDir = path.join(__dirname, "stream");
 app.use("/stream", express.static(streamDir));
@@ -67,6 +67,8 @@ let ffmpeg;
 let recording = false;
 let videoBuffer = [];
 let isVideoReady = false;
+let isProcessing = false;
+const MAX_BUFFER_SIZE = 100;  // 버퍼 크기 제한
 
 function startFFmpeg(userId) {
     const userStreamDir = path.join(streamDir, userId.toString());
@@ -76,7 +78,7 @@ function startFFmpeg(userId) {
     }
 
     const outputFilePath = path.join(userStreamDir, "output.m3u8");
-    ffmpeg = spawn("ffmpeg", [
+    ffmpeg = spawn("C:\\ffmpeg\\bin\\ffmpeg.exe", [
         "-re",
         "-f", "image2pipe",
         "-vcodec", "mjpeg",
@@ -120,19 +122,36 @@ function startFFmpeg(userId) {
 }
 
 function attemptSyncAndStream() {
-    if (isVideoReady && ffmpeg && ffmpeg.stdin.writable) {
+    if (isVideoReady && ffmpeg && ffmpeg.stdin.writable && !isProcessing) {
+        isProcessing = true;
+
         const videoFrame = videoBuffer.shift();
 
-        try {
-            if (videoFrame) {
-                ffmpeg.stdin.write(videoFrame);
-                console.log("Video frame written to FFmpeg.");
-            }
-        } catch (error) {
-            console.error("Failed to write frames to FFmpeg:", error);
-        }
+        if (videoFrame) {
+            try {
+                ffmpeg.stdin.write(videoFrame.frame, (err) => {
+                    if (err) {
+                        console.error("Error writing to FFmpeg stdin:", err);
+                    } else {
+                        console.log("Video frame written to FFmpeg.");
+                    }
 
-        isVideoReady = videoBuffer.length > 0;
+                    isProcessing = false;
+
+                    // 버퍼에 남은 프레임이 있을 경우 다음 프레임을 처리
+                    if (videoBuffer.length > 0) {
+                        attemptSyncAndStream();
+                    } else {
+                        isVideoReady = false; // 더 이상 처리할 프레임이 없음을 나타냄
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to write frames to FFmpeg:", error);
+                isProcessing = false;
+            }
+        } else {
+            isProcessing = false;
+        }
     }
 }
 
@@ -141,7 +160,7 @@ async function updateBroadcastStatus(userId, isLive) {
         // 유저의 가장 최신 방송을 찾아 is_live 상태를 업데이트
         const updatedBroadcast = await Broadcast.findOneAndUpdate(
             { user_id: userId },  // 조건: 해당 유저의 방송
-            { is_live: true },  // 업데이트할 필드
+            { is_live: isLive },  // 업데이트할 필드
             { sort: { createdAt: -1 }, new: true }  // 최신 순으로 정렬하여 가장 최신 방송을 찾음
         );
 
@@ -164,21 +183,7 @@ async function stopFFmpeg(userId) {
         isVideoReady = false;
         console.log("Recording stopped");
 
-        try {
-            const updatedBroadcast = await Broadcast.findOneAndUpdate(
-                { user_id: userId },
-                { is_live: false },
-                { sort: { createdAt: -1 }, new: true }  // 최신 방송을 업데이트하도록 정렬 추가
-            );
-
-            if (updatedBroadcast) {
-                console.log(`Broadcast ${updatedBroadcast._id} is now not live.`);
-            } else {
-                console.error("Broadcast not found for this user.");
-            }
-        } catch (error) {
-            console.error("Error updating broadcast status:", error);
-        }
+        await updateBroadcastStatus(userId, false); // 방송 중지 시 is_live 상태를 false로 업데이트
     }
 }
 
@@ -202,8 +207,8 @@ io.on("connection", (socket) => {
         console.log("isMosaicEnabled:", isMosaicEnabled);
 
         if (isMosaicEnabled) {
-                console.log("모자이크가 활성화되었습니다.");
-            }
+            console.log("모자이크가 활성화되었습니다.");
+        }
 
         if (!userId) {
             console.error("userId가 누락되었습니다.");
@@ -211,7 +216,7 @@ io.on("connection", (socket) => {
             return;
         }
 
-        updateBroadcastStatus(userId, true); // 방송 시작 시 is_live 상태를 true로 업데이트
+        await updateBroadcastStatus(userId, true); // 방송 시작 시 is_live 상태를 true로 업데이트
 
         if (!recording) {
             startFFmpeg(userId);
@@ -221,7 +226,7 @@ io.on("connection", (socket) => {
             try {
                 await axios.post("http://43.202.253.68:5003/process_image", { signedUrl: data.signedUrl, isMosaicEnabled: data.isMosaicEnabled });
                 console.log("Signed URL successfully sent to model server.");
-                signedUrlSent = true
+                signedUrlSent = true;
             } catch (error) {
                 console.error("Error sending signed URL to model server:", error);
             }
@@ -241,55 +246,68 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("stream_image", async (imageBase64) => {
+    socket.on("stream_image", async (imageBase64, timestamp) => {
+        timestamp = timestamp || Date.now();
+        console.log(`Frame received with timestamp: ${timestamp}`);
+
         try {
-            const data = { image: imageBase64 };  // 데이터를 명확하게 정의
-            const response = await instance.post("/process_image", data);  // axios로 POST 요청 전송
+            const data = { image: imageBase64 };
+            const response = await instance.post("/process_image", data);
+
             if (response.data.image) {
-                // 서버로부터 받은 데이터를 처리
-                videoBuffer.push(Buffer.from(response.data.image, "base64"));
+                videoBuffer.push({ frame: Buffer.from(response.data.image, "base64"), timestamp: timestamp });
             } else {
-                // 받은 데이터가 없다면 원본 이미지를 그대로 사용
-                videoBuffer.push(Buffer.from(imageBase64, "base64"));
+                videoBuffer.push({ frame: Buffer.from(imageBase64, "base64"), timestamp: timestamp });
             }
+
+            // 버퍼 크기 제한 체크
+            if (videoBuffer.length > MAX_BUFFER_SIZE) {
+                console.warn("Buffer overflow detected! Clearing the buffer to prevent memory issues.");
+                videoBuffer = []; // 버퍼 비우기
+            }
+
+            // 타임스탬프를 기준으로 버퍼 정렬
+            videoBuffer.sort((a, b) => a.timestamp - b.timestamp);
+
             isVideoReady = true;
-            attemptSyncAndStream();  // 스트리밍 시작
+            attemptSyncAndStream();  // 프레임 스트리밍 시도
+
+            // 현재 버퍼 크기 출력
+            console.log(`Current buffer size: ${videoBuffer.length}`);
         } catch (error) {
             console.error("Error processing image:", error);
         }
     });
 
     socket.on("joinRoom", (data) => {
-        broadcastId = data.broadcastId;
-        userId = data.userId;
+        const { broadcastId, userId } = data;
         socket.join(broadcastId); // 사용자를 특정 방송 방에 추가
         console.log(`User ${userId} joined room ${broadcastId}`);
-      });
+    });
 
-      // 사용자가 채팅 메시지를 전송
-      socket.on("sendMessage", async (data) => {
+    // 사용자가 채팅 메시지를 전송
+    socket.on("sendMessage", async (data) => {
         console.log('Received message data:', data);
         const { broadcastId, message, username } = data;
 
         try {
-          const updatedMessage = await Message.findOneAndUpdate(
-            { broadcastId: new mongoose.Types.ObjectId(broadcastId) },
-            { $push: { messages: { message, username, createdAt: new Date() } }, $setOnInsert: { likes: 0 } },
-            { new: true, upsert: true }
-          );
+            const updatedMessage = await Message.findOneAndUpdate(
+                { broadcastId: new mongoose.Types.ObjectId(broadcastId) },
+                { $push: { messages: { message, username, createdAt: new Date() } }, $setOnInsert: { likes: 0 } },
+                { new: true, upsert: true }
+            );
 
-          console.log('Updated message:', updatedMessage.messages);
-          io.to(broadcastId).emit("receiveMessage", updatedMessage.messages);
+            console.log('Updated message:', updatedMessage.messages);
+            io.to(broadcastId).emit("receiveMessage", updatedMessage.messages);
         } catch (error) {
-          console.error("Error while updating message:", error);
+            console.error("Error while updating message:", error);
         }
-      });
+    });
 
     socket.on("disconnect", () => {
         console.log("Client disconnected");
     });
 });
-
 
 // Route 설정
 const s3URLPassRouter = require("./routes/s3_url_pass.js");

@@ -56,6 +56,6 @@ venv/
 /makking_app/linux
 /makking_app/linux/flutter
 makking_app/pubspec.lock
-.env
+node_backend/.env
 
 /makking_app/build
