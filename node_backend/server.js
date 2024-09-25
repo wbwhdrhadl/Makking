@@ -100,7 +100,7 @@ function startFFmpeg(userId) {
         "-bufsize", "6000k",
         "-pix_fmt", "yuv420p",
         "-g", "30",
-        "-c:a", "aac", // 오디오 코덱 설정
+        "-c:a", "libmp3lame", // 오디오 코덱 변경
         "-b:a", "128k", // 오디오 비트레이트 설정
         "-hls_time", "2",
         "-hls_list_size", "20",
