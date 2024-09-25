@@ -78,14 +78,19 @@ function startFFmpeg(userId) {
     }
 
     const outputFilePath = path.join(userStreamDir, "output.m3u8");
-    ffmpeg = spawn("C:\\ffmpeg\\bin\\ffmpeg.exe", [
+    ffmpeg = spawn("/usr/local/bin/ffmpeg", [
         "-re",
         "-f", "image2pipe",
         "-vcodec", "mjpeg",
         "-pix_fmt", "yuvj420p",
         "-s", "320x240",
         "-r", "5",
-        "-i", "-",
+        "-i", "-",  // 비디오 프레임 입력
+        "-f", "s16le",
+        "-ar", "44100",
+        "-ac", "2",
+        "-i", "-",  // 오디오 입력
+        "-shortest", // 오디오와 비디오의 길이를 맞춤
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
@@ -95,12 +100,14 @@ function startFFmpeg(userId) {
         "-bufsize", "6000k",
         "-pix_fmt", "yuv420p",
         "-g", "30",
+        "-c:a", "aac", // 오디오 코덱 설정
+        "-b:a", "128k", // 오디오 비트레이트 설정
         "-hls_time", "2",
         "-hls_list_size", "20",
         "-hls_flags", "delete_segments",
         "-f", "hls",
-        "-threads", "4",  // 스레드 사용 설정
-        "-crf", "20",  // 품질-속도 균형 설정
+        "-threads", "4",
+        "-crf", "20",
         outputFilePath
     ]);
 
