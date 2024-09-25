@@ -41,7 +41,7 @@ const connection = mongoose.createConnection(mongoURI, {
 });
 
 const instance = axios.create({
-    baseURL: 'http://43.201.248.85:5003',
+    baseURL: 'http://43.202.253.68:5003',
     timeout: 120000,  // 타임아웃 시간 설정 (예: 60초)
 });
 
