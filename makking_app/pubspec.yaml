@@ -48,7 +48,7 @@ dependencies:
   flutter_webrtc: ^0.9.12
   flutter_ffmpeg: ^0.4.0
   video_player: ^2.2.0
-  flutter_sound: any
+  flutter_sound: ^9.1.8
   permission_handler: any
   path_provider: ^2.0.11
   google_fonts: ^4.0.0

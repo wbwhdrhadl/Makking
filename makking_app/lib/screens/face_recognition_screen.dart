@@ -37,7 +37,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
   @override
   void initState() {
     super.initState();
-    print('Mosaic enabled: ${widget.isMosaicEnabled}');  // 값이 제대로 들어오는지 확인
+    print('Mosaic enabled: ${widget.isMosaicEnabled}'); // 값이 제대로 들어오는지 확인
     socket = IO.io('http://${widget.serverIp}:5001', <String, dynamic>{
       'transports': ['websocket'],
     });
@@ -84,7 +84,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
 
       final uploadResponse = await uploadRequest.send();
       final responseBody = await uploadResponse.stream.bytesToString();
-      print('Upload Response: $responseBody');  // 서버 응답을 먼저 확인
+      print('Upload Response: $responseBody'); // 서버 응답을 먼저 확인
       final responseJson = json.decode(responseBody);
 
       if (uploadResponse.statusCode == 200) {
@@ -107,7 +107,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       showErrorDialog('서버 요청 중 오류 발생: $e');
     } finally {
       setState(() {
-      isLoading = false;
+        isLoading = false;
       });
     }
   }
@@ -132,7 +132,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
           final response = await http.post(
             sendUrlUri,
             headers: {'Content-Type': 'application/json'},
-            body: json.encode({'signedUrl': signedUrl,'isMosaicEnabled': widget.isMosaicEnabled }),
+            body: json.encode({'signedUrl': signedUrl, 'isMosaicEnabled': widget.isMosaicEnabled}),
           );
 
           if (response.statusCode == 200) {
@@ -150,7 +150,6 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       showErrorDialog('서명된 URL 생성 중 오류 발생: $e');
     }
   }
-
 
   Future<void> saveBroadcastData(String faceImageUrl) async {
     final uri = Uri.parse('http://${widget.serverIp}:5001/broadcast/Setting');
@@ -174,7 +173,6 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
       ));
     }
 
-
     try {
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
@@ -186,10 +184,9 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => BroadcastScreen(
-              imageBytes: null,
               userId: widget.userId,
               serverIp: widget.serverIp, // 서버 IP 전달
-              isMosaicEnabled: widget.isMosaicEnabled,  // 모자이크 여부 전달
+              isMosaicEnabled: widget.isMosaicEnabled, // 모자이크 여부 전달
             ),
           ),
         );
@@ -265,17 +262,17 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen> {
                             style: GoogleFonts.doHyeon(color: Colors.white),
                           )
                         : Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.memory(
-                                  imageBytes!,
-                                  fit: BoxFit.contain, // 이미지 원본 크기로 표시
-                                ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                imageBytes!,
+                                fit: BoxFit.contain, // 이미지 원본 크기로 표시
                               ),
                             ),
+                          ),
                     SizedBox(height: 20),
                     Text(
                       imageBytes == null
