@@ -7,6 +7,10 @@ import 'package:image/image.dart' as imglib;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class BroadcastScreen extends StatefulWidget {
   final Uint8List? imageBytes;
@@ -29,6 +33,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
   List<String> comments = [];
   int likes = 0;
   bool _isKeyboardVisible = false;
+  FlutterSoundRecorder? _audioRecorder;
+  String? _recordingPath;
 
   @override
   void initState() {
@@ -37,6 +43,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     _setLandscapeMode();
     initializeCamera();
     initializeSocket();
+    initializeAudioRecorder();
   }
 
   @override
@@ -45,6 +52,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
     _setPortraitMode();
     _cameraController?.dispose();
     _socket?.disconnect();
+    _audioRecorder?.closeRecorder();
     super.dispose();
   }
 
@@ -100,6 +108,89 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
         likes = data;
       });
     });
+
+    _socket!.on('stream_path', (data) {
+      setState(() {
+        _recordingPath = data['path'];
+        print("Recording path received: $_recordingPath");
+
+        if (isRecording) {
+          startStreaming();
+        }
+      });
+    });
+  }
+
+  Future<void> initializeAudioRecorder() async {
+    _audioRecorder = FlutterSoundRecorder();
+
+    if (await Permission.microphone.request().isGranted) {
+      await _audioRecorder!.openRecorder();
+      print("Microphone permission granted.");
+    } else {
+      print("Microphone permission denied.");
+    }
+  }
+
+  Future<void> startAudioStream() async {
+    if (_audioRecorder == null) return;
+
+    if (_audioRecorder!.isRecording) {
+      print("Recording is already in progress.");
+      return;
+    }
+
+    try {
+      // 앱 전용 디렉토리 경로를 가져옴
+      final directory = await getApplicationDocumentsDirectory();
+      final path = '${directory.path}/audio_stream.aac';
+
+      await Future.delayed(Duration(seconds: 1)); // 경로 생성 후 잠깐 대기
+
+      await _audioRecorder!.startRecorder(
+        codec: Codec.aacADTS,
+        toFile: path,
+      );
+
+      print("Audio recording started at $path.");
+
+      Timer.periodic(Duration(milliseconds: 500), (Timer t) async {
+        if (isRecording) {
+          try {
+            if (await File(path).exists()) {
+              final fileData = await File(path).readAsBytes();
+              if (fileData.isNotEmpty) {
+                String audioBase64 = base64Encode(fileData);
+                _socket!.emit('stream_audio', audioBase64);
+                print("Sent audio data: ${fileData.length} bytes");
+              } else {
+                print("Captured audio data is empty.");
+              }
+            } else {
+              print("File does not exist yet.");
+            }
+          } catch (e) {
+            print("Error capturing audio data: $e");
+          }
+        } else {
+          t.cancel();
+          print("Audio recording stopped.");
+        }
+      });
+    } catch (e) {
+      print("Error starting audio recording: $e");
+    }
+  }
+
+  Future<void> stopAudioStream() async {
+    if (_audioRecorder != null && _audioRecorder!.isRecording) {
+      try {
+        await _audioRecorder!.stopRecorder();
+        print("Audio recording stopped.");
+      } catch (e) {
+        print("Error stopping audio recording: $e");
+      }
+    }
   }
 
   void startStreaming() {
@@ -110,6 +201,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
           processImage(image);
         }
       });
+      startAudioStream();
     }
   }
 
@@ -170,15 +262,22 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
         isStreaming = false;
       });
       _cameraController?.stopImageStream();
+      stopAudioStream();
     } else {
+      setState(() {
+        isRecording = true;
+      });
+
+      if (_recordingPath != null) {
+        startStreaming();
+      } else {
+        print("Waiting for recording path to be set...");
+      }
+
       _socket!.emit('start_recording', {
         'userId': widget.userId,
         'isMosaicEnabled': widget.isMosaicEnabled,
       });
-      setState(() {
-        isRecording = true;
-      });
-      startStreaming();
     }
   }
 
@@ -209,7 +308,6 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
                 )
               : Center(child: CircularProgressIndicator()),
 
-          // 채팅창
           Positioned(
             right: 0,
             top: 0,
@@ -243,9 +341,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> with WidgetsBindingOb
             ),
           ),
 
-          // 녹화 버튼 및 카메라 전환 버튼을 화면 오른쪽에 배치
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.3, // 화면 중간쯤 위치
+            top: MediaQuery.of(context).size.height * 0.3,
             right: 10,
             child: Column(
               children: [

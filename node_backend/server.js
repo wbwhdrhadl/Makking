@@ -34,7 +34,7 @@ app.use(expressSession({
     cookie: { secure: false, httpOnly: true },
 }));
 
-const mongoURI = "mongodb://localhost:27017/makking";
+const mongoURI = "mongodb://43.201.248.85:27017/makking";
 const connection = mongoose.createConnection(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -66,6 +66,7 @@ app.use("/stream", express.static(streamDir));
 let ffmpeg;
 let recording = false;
 let videoBuffer = [];
+let audioBuffer = [];
 let isVideoReady = false;
 let isProcessing = false;
 const MAX_BUFFER_SIZE = 100;  // 버퍼 크기 제한
@@ -76,6 +77,9 @@ function startFFmpeg(userId) {
         fs.mkdirSync(userStreamDir, { recursive: true });
         console.log(`Created directory for user: ${userId}`);
     }
+
+    console.log(`userStreamDir: ${userStreamDir}`);  // userStreamDir 값을 출력
+    socket.emit('stream_path', { path: userStreamDir });
 
     const outputFilePath = path.join(userStreamDir, "output.m3u8");
     ffmpeg = spawn("/usr/local/bin/ffmpeg", [
@@ -100,8 +104,8 @@ function startFFmpeg(userId) {
         "-bufsize", "6000k",
         "-pix_fmt", "yuv420p",
         "-g", "30",
-        "-c:a", "libmp3lame", // 오디오 코덱 변경
-        "-b:a", "128k", // 오디오 비트레이트 설정
+        "-c:a", "aac", // 오디오 코덱
+        "-b:a", "128k", // 오디오 비트레이트
         "-hls_time", "2",
         "-hls_list_size", "20",
         "-hls_flags", "delete_segments",
@@ -133,24 +137,34 @@ function attemptSyncAndStream() {
         isProcessing = true;
 
         const videoFrame = videoBuffer.shift();
+        const audioFrame = audioBuffer.shift(); // 오디오 프레임도 가져옴
 
-        if (videoFrame) {
+        if (videoFrame && audioFrame) {
             try {
+                // 비디오와 오디오 프레임을 순차적으로 FFmpeg에 전달
                 ffmpeg.stdin.write(videoFrame.frame, (err) => {
                     if (err) {
-                        console.error("Error writing to FFmpeg stdin:", err);
+                        console.error("Error writing video to FFmpeg stdin:", err);
                     } else {
                         console.log("Video frame written to FFmpeg.");
                     }
 
-                    isProcessing = false;
+                    ffmpeg.stdin.write(audioFrame.frame, (err) => {
+                        if (err) {
+                            console.error("Error writing audio to FFmpeg stdin:", err);
+                        } else {
+                            console.log("Audio frame written to FFmpeg.");
+                        }
 
-                    // 버퍼에 남은 프레임이 있을 경우 다음 프레임을 처리
-                    if (videoBuffer.length > 0) {
-                        attemptSyncAndStream();
-                    } else {
-                        isVideoReady = false; // 더 이상 처리할 프레임이 없음을 나타냄
-                    }
+                        isProcessing = false;
+
+                        // 버퍼에 남은 프레임이 있을 경우 다음 프레임을 처리
+                        if (videoBuffer.length > 0 || audioBuffer.length > 0) {
+                            attemptSyncAndStream();
+                        } else {
+                            isVideoReady = false; // 더 이상 처리할 프레임이 없음을 나타냄
+                        }
+                    });
                 });
             } catch (error) {
                 console.error("Failed to write frames to FFmpeg:", error);
@@ -187,6 +201,7 @@ async function stopFFmpeg(userId) {
         ffmpeg = null;
         recording = false;
         videoBuffer = [];
+        audioBuffer = [];
         isVideoReady = false;
         console.log("Recording stopped");
 
@@ -280,10 +295,29 @@ io.on("connection", (socket) => {
             attemptSyncAndStream();  // 프레임 스트리밍 시도
 
             // 현재 버퍼 크기 출력
-            console.log(`Current buffer size: ${videoBuffer.length}`);
+            console.log(`Current video buffer size: ${videoBuffer.length}`);
         } catch (error) {
             console.error("Error processing image:", error);
         }
+    });
+
+    socket.on("stream_audio", (audioBase64, timestamp) => {
+        timestamp = timestamp || Date.now();
+        console.log(`Audio frame received with timestamp: ${timestamp}`);
+
+        const audioFrame = Buffer.from(audioBase64, "base64");
+        audioBuffer.push({ frame: audioFrame, timestamp: timestamp });
+
+        if (audioBuffer.length > MAX_BUFFER_SIZE) {
+            console.warn("Audio buffer overflow detected! Clearing the buffer to prevent memory issues.");
+            audioBuffer = [];
+        }
+
+        // 버퍼 정렬 및 스트리밍 시도
+        audioBuffer.sort((a, b) => a.timestamp - b.timestamp);
+        attemptSyncAndStream();
+
+        console.log(`Current audio buffer size: ${audioBuffer.length}`);
     });
 
     socket.on("joinRoom", (data) => {
