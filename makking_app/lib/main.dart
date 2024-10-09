@@ -14,7 +14,7 @@ void main() async {
   KakaoSdk.init(
       nativeAppKey: '06227f68ca3165e60c6c3f8941c6885f'); // 여기에 카카오 앱 키를 입력하세요
 
-  const serverIp = '43.201.248.85';
+  const serverIp = '54.180.249.50';
   // KakaoSdk.origin 값을 비동기적으로 가져와서 출력
   String kakaoOrigin = await KakaoSdk.origin;
   print(kakaoOrigin);
